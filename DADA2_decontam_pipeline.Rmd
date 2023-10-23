@@ -1,0 +1,292 @@
+---
+title: "DADA2 pipeline with decontam package "
+output: html_notebook
+---
+
+
+
+#Loading Libraries
+```{r}
+library(tidyr)
+library(tidyverse)
+library(kableExtra)
+library(ggplot2)
+library(dplyr)
+library(dada2)
+library(phyloseq)
+library(decontam)
+library(fastqcr)
+library(readxl)
+library(phangorn)
+library(Biostrings)
+library(DECIPHER)
+```
+
+
+#Extracting and filtering reads
+```{r}
+# setting up file paths and directories
+reads_path <-"./Data/sequences/" # path to find Files
+list.files(reads_path)
+# stores path for forward and reverse seqs
+Fs_path <- sort(list.files(reads_path, pattern="R1_001.fastq.gz", full.names = TRUE))
+Rs_path <- sort(list.files(reads_path, pattern="R2_001.fastq.gz", full.names = TRUE))
+# create directories for processed files
+Fs_path_filtered <- file.path(reads_path, "filtered_Fs")
+Rs_path_filtered <- file.path(reads_path, "filtered_Rs")
+
+# extracting file names
+PRJ002_samples <- str_replace(string = basename(Fs_path), 
+                                  pattern = "_L001_R1_001.fastq.gz",
+                                  replacement = "")
+
+# plotting Quality profiles
+set.seed(1234)
+plotQualityProfile(Fs_path[sample(1:48, 12, replace = FALSE)])
+plotQualityProfile(Rs_path[sample(1:48, 12, replace = FALSE)])
+
+
+#filtering out reads
+out <- filterAndTrim(fwd=Fs_path, 
+              filt=Fs_path_filtered,
+              rev=Rs_path, 
+              filt.rev=Rs_path_filtered,
+              truncLen=c(150,150), # forward and reverse read truncate if less than 150bp
+              maxEE=c(2,2), 
+              truncQ=2, 
+              maxN=0, 
+              rm.phix=TRUE,
+              compress=TRUE, 
+              verbose=TRUE, 
+              multithread=TRUE)
+out <- out[-c(97),]# removing undetermineds
+```
+
+#renaming samples from Forward and Reverse paths
+```{r}
+## renaming samples
+Fs_filt <- list.files(Fs_path_filtered, full.names = TRUE, pattern = "fastq.gz")
+Rs_filt <- list.files(Rs_path_filtered, full.names = TRUE, pattern = "fastq.gz")
+
+Fs_filt <- as.data.frame(Fs_filt)
+
+Fs_filt<- Fs_filt[-c(97),]
+
+Rs_filt <- as.data.frame(Rs_filt)
+Rs_filt <- Rs_filt[-c(97),]
+PRJ002_samples<- as.data.frame(PRJ002_samples)
+
+PRJ002_samples <- PRJ002_samples[-c(97),]
+# Create names
+names(Fs_filt) <- PRJ002_samples
+names(Rs_filt) <- PRJ002_samples
+```
+
+#Analyzing error rates and merging reads
+```{r}
+# analyzing errors
+errF <- learnErrors(Fs_filt, nbases = 1e8, multithread=TRUE)
+errR <- learnErrors(Rs_filt, nbases = 1e8, multithread=TRUE)
+
+dadaFs <- dada(Fs_filt, err=errF, multithread=TRUE)
+dadaRs <- dada(Rs_filt, err = errR, multithread = TRUE)
+
+## merge reads, note that if your undetermineds have been moved into your filtered folder and are not in your filtered list they will need to be removed
+mergers <- mergePairs(dadaFs, Fs_path_filtered, 
+                      dadaRs, Rs_path_filtered)
+```
+
+constructing table and filtering chimeras
+```{r}
+seqtab <- makeSequenceTable(mergers)
+
+#remove chimaeras
+seqtab_nochim <- removeBimeraDenovo(seqtab, method="consensus", multithread=TRUE, verbose=TRUE)
+
+num_chim_removed <- 1 - (sum(seqtab_nochim)/sum(seqtab))
+
+num_chim_removed
+
+getN <- function(x) sum(getUniques(x))
+track <- cbind(out, sapply(dadaFs, getN), sapply(dadaRs, getN), sapply(mergers, getN), rowSums(seqtab_nochim))
+colnames(track) <- c("input", "filtered", "denoisedF", "denoisedR", "merged", "nonchim")
+rownames(track) <- PRJ002_samples
+kableExtra::kable(track)
+
+track<-data.frame(track)
+track$perc_retained<-track$nonchim/track$input*100
+track["Total",] <- colSums(track)
+view(track)
+```
+
+#Assigning Taxonomy
+```{r}
+# assigning Taxa with GTDB database
+taxa <- assignTaxonomy(seqtab_nochim, "~/Documents/GitHub/PRJ002_Ranlaysis/scripts/Archive/GTDB_bac120_arc122_ssu_r202_fullTaxo.fa.gz", minBoot  = 80)
+
+X16smetadata <- read_excel("./Data/16smetadata.xlsx", 
+    col_types = c("text", "text", "text", 
+        "text", "date", "numeric","text"))
+View(X16smetadata)
+X16smetadata<- X16smetadata[-c(97),]
+
+X16smetadata$Sample_names <- PRJ002_samples
+
+X16smetadata1 <- X16smetadata[,c(8,6,1,2,5,4,7)]
+
+metadata<- as.data.frame( X16smetadata1[,c(1:7)])### this needs to be done to import metadata as a dataframe then add rownames to make the table allign properly for phyloseq function
+otus<-otu_table(seqtab_nochim, taxa_are_rows = F)
+otu_names <-sample_names(otus)
+
+
+row.names(metadata)<-otu_names
+
+ps <- phyloseq(otu_table(seqtab_nochim, taxa_are_rows=FALSE), 
+               sample_data(metadata), 
+               tax_table(taxa))
+
+dna <- Biostrings::DNAStringSet(taxa_names(ps))
+names(dna) <- taxa_names(ps)
+ps <- merge_phyloseq(ps, dna)
+taxa_names(ps) <- paste0("ASV", seq(ntaxa(ps)))
+ps
+saveRDS(ps, "ps_og1.rds")
+```
+
+```{r}
+# adding sequencesto object
+ASVs.nochim = DNAStringSet(colnames(seqtab_nochim))
+names(ASVs.nochim) = paste0("ASV", 1:ncol(seqtab_nochim))
+# running alignment
+alignment = AlignSeqs(ASVs.nochim, anchor=NA, processors=30)
+# converting to phydat object
+phang.align <- phyDat(as(alignment, "matrix"), type="DNA")
+
+# calculate distances and compute tree
+dm <- dist.ml(phang.align)
+treeNJ <- NJ(dm)
+#calculate tree likelihood and optimize model
+fit = pml(treeNJ, data=phang.align)
+fitGTR <- update(fit, k=4, inv=0.2)
+fitGTR <- optim.pml(fitGTR, model="GTR", optInv=TRUE, optGamma=TRUE, rearrangement = "stochastic", control = pml.control(trace = 0))
+
+save(fitGTR, file="fitGTR.RData")
+
+```
+
+# creating phyloseq object with tree added
+```{r}
+ps<- readRDS("ps_og1.rds")
+
+ps@phy_tree<-fitGTR$tree
+
+
+saveRDS(ps, "ps_tree.rds")
+```
+
+```{r}
+# removing phylum NAs from the ps
+ps1 <- subset_taxa(ps, !is.na(Phylum))
+table(tax_table(ps)[, "Phylum"], exclude = NULL)
+
+ps1
+```
+
+#Running decontam with elution buffer as contaminant
+```{r}
+head(sample_data(ps1))
+sample_data(ps1)$is.neg <- ifelse(sample_data(ps1)$Condition == "blank", T, F)
+df <- data.frame(sample_data(ps1)) # Put sample_data into a ggplot-friendly data.frame
+df$LibrarySize <- sample_sums(ps1)
+df <- df[order(df$LibrarySize),]
+df$Index <- seq(nrow(df))
+ggplot(data=df, aes(x=Index, y=LibrarySize, color=is.neg)) + geom_point()
+
+
+
+sample_data(ps1)$Sample_names<-rownames( sample_data(ps1))
+#removing outliers ( 20k<reads<250K) if not needed for deocontam package
+ps1 = subset_samples(ps1, Sample_names != "SAM_337_S46"&Sample_names != "SAM_339_S48" &Sample_names != "SAM_258_S19"&Sample_names != "SAM_367_S76"&Sample_names != "SAM_310_S45"&Sample_names != "SAM_304_S39"&Sample_names != "EB3_S96") 
+
+sample_data(ps1)$quant_reading<- as.numeric(sample_data(ps1)$quant_reading)
+# prevalence method
+contamdf.prev<- isContaminant(ps1, method= "prevalence",neg="is.neg", threshold =.1)
+# now graph to check that the split looks appropriate
+ps.pa <- transform_sample_counts(ps1, function(abund) 1*(abund>0))
+ps.pa.neg <- prune_samples(sample_data(ps.pa)$Condition == "blank", ps.pa)
+ps.pa.pos <- prune_samples(sample_data(ps.pa)$Condition != "blank", ps.pa)
+
+df.pa <- data.frame(pa.pos=taxa_sums(ps.pa.pos), pa.neg=taxa_sums(ps.pa.neg),
+                      contaminant=contamdf.prev$contaminant)
+plot_contam_blank<-ggplot(data=df.pa, aes(x=pa.neg, y=pa.pos, color=contaminant)) + geom_point() +xlab("Prevalence (Negative Controls)") + ylab("Prevalence (True Samples)")
+
+plot_contam_blank
+
+ps.clean1 <- prune_taxa(!contamdf.prev$contaminant, ps1)
+
+ps2 <- prune_taxa(!contamdf.prev$contaminant, ps1)
+
+prevdf1 <- apply(X = otu_table(ps.clean1),
+               MARGIN = ifelse(taxa_are_rows(ps.clean1), yes = 1, no = 2),
+               FUN = function(x){sum(x > 0)})
+# Add taxonomy and total read counts to this data.frame
+prevdf1 <- data.frame(Prevalence = prevdf1,
+                    TotalAbundance = taxa_sums(ps.clean1),
+                    tax_table(ps.clean1))
+
+
+# Execute prevalence filter, using `prune_taxa()` function- this is removing only singletons
+keepTaxa <- rownames(prevdf1)[(prevdf1$Prevalence >1)]
+ps.clean1 <- prune_taxa(keepTaxa, ps.clean1)
+
+saveRDS(ps.clean1, "ps.cleantree1.rds")
+
+
+```
+#Running secondary screen from seawater filters
+```{r}
+head(sample_data(ps2))
+sample_data(ps2)$is.neg <- ifelse(sample_data(ps2)$Condition == "FAASW", T, F)
+df2 <- data.frame(sample_data(ps2)) # Put sample_data into a ggplot-friendly data.frame
+df2$LibrarySize <- sample_sums(ps2)
+df2 <- df2[order(df2$LibrarySize),]
+df2$Index <- seq(nrow(df2))
+view(df)
+ggplot(data=df2, aes(x=Index, y=LibrarySize, color=is.neg)) + geom_point()
+
+
+sample_data(ps2)$quant_reading<- as.numeric(sample_data(ps2)$quant_reading)
+# prevalence method
+contamdf.prev2<- isContaminant(ps2, method= "prevalence",neg="is.neg", conc = "quant_reading", threshold =.1)
+# now graph to check that the split looks appropriate
+ps.pa2 <- transform_sample_counts(ps2, function(abund) 1*(abund>0))
+ps.pa.neg2 <- prune_samples(sample_data(ps.pa2)$Condition == "FAASW", ps.pa2)
+ps.pa.pos2 <- prune_samples(sample_data(ps.pa2)$Condition != "FAASW", ps.pa2)
+
+df.pa2 <- data.frame(pa.pos=taxa_sums(ps.pa.pos2), pa.neg=taxa_sums(ps.pa.neg2),
+                      contaminant=contamdf.prev2$contaminant)
+plot_contam_FAASW<-ggplot(data=df.pa2, aes(x=pa.neg, y=pa.pos, color=contaminant)) + geom_point() +xlab("Prevalence (Negative Controls)") + ylab("Prevalence (True Samples)")
+
+plot_contam_FAASW
+
+
+ps3 <- prune_taxa(!contamdf.prev2$contaminant, ps2)
+
+prevdf3 <- apply(X = otu_table(ps3),
+               MARGIN = ifelse(taxa_are_rows(ps3), yes = 1, no = 2),
+               FUN = function(x){sum(x > 0)})
+# Add taxonomy and total read counts to this data.frame
+prevdf3 <- data.frame(Prevalence = prevdf3,
+                    TotalAbundance = taxa_sums(ps3),
+                    tax_table(ps3))
+
+
+# Execute prevalence filter, using `prune_taxa()` function- this is removing only singletons
+keepTaxa <- rownames(prevdf3)[(prevdf3$Prevalence >1)]
+ps.clean3 <- prune_taxa(keepTaxa, ps3)
+ps.clean4<- prune_samples(sample_data(ps.clean3)$Condition != 'FAASW'& sample_data(ps.clean3)$Condition !=  'blank', ps.clean3)
+saveRDS(ps.clean3, "ps.cleantree3.rds")
+saveRDS(ps.clean4, 'ps.cleantree.noblanks.rds')
+
+ps.clean3<-readRDS('ps.cleantree3.rds')
+```
