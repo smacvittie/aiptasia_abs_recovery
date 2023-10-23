@@ -1,0 +1,804 @@
+---
+title: "Aldex2 Pipeline PRJ002"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+```{r}
+library(tidyr)
+library(tidyverse)
+library(kableExtra)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(lubridate)
+library(vegan)
+library(ggpubr)
+library(rstatix)
+library(stringr)
+library(emmeans)
+library(multcomp)
+library(multcompView)
+library(dada2)
+library(phyloseq)
+library(ggh4x)
+library(grid)
+library(ALDEx2)
+library(ggrepel)
+```
+
+Read in Phyloseq object
+```{r}
+#ps <-readRDS("/Users/sophiemacvittie/Documents/Github/PRJ002_Ranlaysis/PRJ002_Edited_R_Files/ps.clean.noblanks.rds")
+ps<-readRDS(file = 'ps.cleantree.noblanks.rds') ## by the way you dont need to put in the full path if you are working within your repo
+```
+
+# ABS1 vs. Control 
+
+subset samples to compare only abs1 and control at each timepoint 
+```{r}
+ps_abs1 <- subset_samples(ps, Condition == "Control"| Condition == "ABS1")
+ps_abs1_t4 <-subset_samples(ps_abs1, Time == "T4") #  abs exposure
+ps_abs1_t5 <-subset_samples(ps_abs1, Time == "T5") # recovery point 1
+ps_abs1_t6 <-subset_samples(ps_abs1, Time == "T6") # recovery point 2
+```
+
+### ABS1 T4 - end of ABS exposure 
+```{r}
+sample_data(ps_abs1_t4) #checking if it looks like i want it to look like 
+```
+
+run aldex2
+```{r}
+pf<-ps_abs1_t4 #subset phyloseq object here, you can copy and paste the next few sections to easily repeat - just change output and input names
+conds <- sample_data(pf)$Condition
+reads<-t(data.frame(otu_table(pf)))
+reads<-reads[rowSums(reads) > 0,] #removes rows with only 0 in dataframe
+
+#run clr
+x <- aldex.clr(reads, conds, mc.samples=128, denom="all", verbose=F)
+
+#run t-test because we are only comparing one variable with two levels
+x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=FALSE)
+x.kw <- aldex.kw(x)
+
+#run effect
+x.effect <- aldex.effect(x, CI=T, verbose=FALSE)
+
+#combine table
+x.all <- data.frame(x.tt,x.kw,x.effect)
+# Plot 
+par(mfrow=c(1,2))
+aldex.plot(x.all, type="MA", test="glm", cutoff.pval=0.05) #can use the glm model test as the sig value 
+aldex.plot(x.all, type="MW", test="glm",cutoff.pval=0.05)
+
+par(mfrow=c(1,2))
+aldex.plot(x.all, type="MA", test="welch", cutoff.pval=0.05) #can use the glm model test as the sig value 
+aldex.plot(x.all, type="MW", test="welch",cutoff.pval=0.05)
+
+# Check for asymmetry - should be centered around 0
+par(mfrow=c(1,2))
+hist(x.all$diff.btw)
+hist(x.all$effect)
+```
+
+
+plots from aldex package
+```{r}
+par(mfrow=c(1,2))
+plot(x.all$effect, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2),
+  pch=19, xlab="Effect size", ylab=" BH P value", main="Effect size plot")
+points(x.all$effect, x.all$we.eBH, cex=0.7, col='red', pch=19)
+abline(h=0.05, lty=2, col="grey")
+abline(v=2, lty=2, col="grey")
+abline(v=-2, lty=2, col="grey")
+
+plot(x.all$diff.btw, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2),
+  pch=19, xlab="Difference", ylab="P value", main="Volcano plot")
+points(x.all$effect, x.all$we.eBH, cex=0.7, col='red', pch=19)
+abline(h=0.05, lty=2, col="grey")
+```
+
+subset ASVs with an effect size > 2
+pvalue for glm < 0.05 and ttest pvalue < 0.05
+nr. sigtaxa
+```{r}
+x.all.abs1.t4<-x.all
+x.all.sig.abs1.t4<-x.all.abs1.t4 %>% filter(effect > 2 | effect < -2) %>% filter(glm.eBH < 0.05) %>% filter(we.eBH < 0.05)
+x.all.sig.abs1.t4
+sig_features_abs1_t4<-rownames(x.all.sig.abs1.t4)
+length(sig_features_abs1_t4)
+```
+volcano plot for supplement
+```{r}
+ggplot(x.all.abs1.t4, aes(y=-log10(we.eBH), x=effect)) + 
+  geom_point() + 
+  geom_point(data=x.all.sig.abs1.t4, aes(y=-log10(we.eBH), x=effect),color='blue') + 
+  geom_hline(yintercept = -log10(0.05),color='gray', linetype='dashed') + geom_vline(xintercept = 2, color='gray', linetype='dashed') +  geom_vline(xintercept = -2,color='gray', linetype='dashed')+
+  geom_text_repel(data=x.all.sig.abs1.t4,aes(y=-log10(we.eBH), x=effect,label=rownames(x.all.sig.abs1.t4)), min.segment.length=0, max.overlaps = 15) + 
+  theme_bw() + ggtitle(label = 'ABS1 vs. Control')
+```
+
+### ABS1 - T5
+```{r}
+pf<-ps_abs1_t5 #subset phyloseq object here, you can copy and paste the next few sections to easily repeat - just change output and input names
+conds <- sample_data(pf)$Condition
+reads<-t(data.frame(otu_table(pf)))
+reads<-reads[rowSums(reads) > 0,] #removes rows with only 0 in dataframe
+
+#run clr
+x <- aldex.clr(reads, conds, mc.samples=128, denom="zero", verbose=F)
+
+#run t-test because we are only comparing one variable with two levels
+x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=FALSE)
+x.kw <- aldex.kw(x)
+
+#run effect
+x.effect <- aldex.effect(x, CI=T, verbose=FALSE)
+
+#combine table
+x.all <- data.frame(x.tt,x.kw,x.effect)
+
+# Plot 
+par(mfrow=c(1,2))
+aldex.plot(x.all, type="MA", test="glm", cutoff.pval=0.05) #can use the glm model test as the sig value 
+aldex.plot(x.all, type="MW", test="glm",cutoff.pval=0.05)
+
+par(mfrow=c(1,2))
+aldex.plot(x.all, type="MA", test="welch", cutoff.pval=0.05) #can use the glm model test as the sig value 
+aldex.plot(x.all, type="MW", test="welch",cutoff.pval=0.05)
+
+# Check for asymmetry - should be centered around 0
+par(mfrow=c(1,2))
+hist(x.all$diff.btw)
+hist(x.all$effect)
+```
+
+
+plots from aldex package
+```{r}
+par(mfrow=c(1,2))
+plot(x.all$effect, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2),
+  pch=19, xlab="Effect size", ylab=" BH P value", main="Effect size plot")
+points(x.all$effect, x.all$we.eBH, cex=0.7, col='red', pch=19)
+abline(h=0.05, lty=2, col="grey")
+abline(v=2, lty=2, col="grey")
+abline(v=-2, lty=2, col="grey")
+
+plot(x.all$diff.btw, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2),
+  pch=19, xlab="Difference", ylab="P value", main="Volcano plot")
+points(x.all$effect, x.all$we.eBH, cex=0.7, col='red', pch=19)
+abline(h=0.05, lty=2, col="grey")
+```
+
+subset ASVs with an effect size > 2
+pvalue for glm < 0.05 and ttest pvalue < 0.05
+nr. sigtaxa
+```{r}
+x.all.abs1.t5<-x.all
+x.all.sig.abs1.t5<-x.all.abs1.t5 %>% filter(effect > 2 | effect < -2) %>% filter(glm.eBH < 0.05) %>% filter(we.eBH < 0.05)
+x.all.sig.abs1.t5
+sig_features_abs1_t5<-rownames(x.all.sig.abs1.t5)
+length(sig_features_abs1_t5)
+```
+volcano plot for supplement
+```{r}
+ggplot(x.all.abs1.t5, aes(y=-log10(we.eBH), x=effect)) + 
+  geom_point() + 
+  geom_point(data=x.all.sig.abs1.t5, aes(y=-log10(we.eBH), x=effect),color='blue') + 
+  geom_hline(yintercept = -log10(0.05),color='gray', linetype='dashed') + geom_vline(xintercept = 2, color='gray', linetype='dashed') +  geom_vline(xintercept = -2,color='gray', linetype='dashed')+
+  geom_text_repel(data=x.all.sig.abs1.t5,aes(y=-log10(we.eBH), x=effect,label=rownames(x.all.sig.abs1.t5)), min.segment.length=0, max.overlaps = 15) + 
+  theme_bw() + ggtitle(label = 'ABS1 vs. Control')
+```
+### ABS1 - T6
+```{r}
+pf<-ps_abs1_t6 #subset phyloseq object here, you can copy and paste the next few sections to easily repeat - just change output and input names
+conds <- sample_data(pf)$Condition
+reads<-t(data.frame(otu_table(pf)))
+reads<-reads[rowSums(reads) > 0,] #removes rows with only 0 in dataframe
+
+#run clr
+x <- aldex.clr(reads, conds, mc.samples=128, denom="all", verbose=F)
+
+#run t-test because we are only comparing one variable with two levels
+x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=FALSE)
+x.kw <- aldex.kw(x)
+
+#run effect
+x.effect <- aldex.effect(x, CI=T, verbose=FALSE)
+
+#combine table
+x.all <- data.frame(x.tt,x.kw,x.effect)
+
+# Plot 
+par(mfrow=c(1,2))
+aldex.plot(x.all, type="MA", test="glm", cutoff.pval=0.05) #can use the glm model test as the sig value 
+aldex.plot(x.all, type="MW", test="glm",cutoff.pval=0.05)
+
+par(mfrow=c(1,2))
+aldex.plot(x.all, type="MA", test="welch", cutoff.pval=0.05) #can use the glm model test as the sig value 
+aldex.plot(x.all, type="MW", test="welch",cutoff.pval=0.05)
+
+# Check for asymmetry - should be centered around 0
+par(mfrow=c(1,2))
+hist(x.all$diff.btw)
+hist(x.all$effect)
+```
+
+
+plots from aldex package
+```{r}
+par(mfrow=c(1,2))
+plot(x.all$effect, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2),
+  pch=19, xlab="Effect size", ylab=" BH P value", main="Effect size plot")
+points(x.all$effect, x.all$we.eBH, cex=0.7, col='red', pch=19)
+abline(h=0.05, lty=2, col="grey")
+abline(v=2, lty=2, col="grey")
+abline(v=-2, lty=2, col="grey")
+
+plot(x.all$diff.btw, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2),
+  pch=19, xlab="Difference", ylab="P value", main="Volcano plot")
+points(x.all$effect, x.all$we.eBH, cex=0.7, col='red', pch=19)
+abline(h=0.05, lty=2, col="grey")
+```
+
+subset ASVs with an effect size > 2
+pvalue for glm < 0.05 and ttest pvalue < 0.05
+nr. sigtaxa
+```{r}
+x.all.abs1.t6<-x.all
+x.all.sig.abs1.t6<-x.all.abs1.t6 %>% filter(effect > 2 | effect < -2) %>% filter(glm.eBH < 0.05) %>% filter(we.eBH < 0.05)
+x.all.sig.abs1.t6
+sig_features_abs1_t6<-rownames(x.all.sig.abs1.t6)
+length(sig_features_abs1_t6)
+```
+volcano plot for supplement
+```{r}
+ggplot(x.all.abs1.t6, aes(y=-log10(we.eBH), x=effect)) + 
+  geom_point() + 
+  geom_point(data=x.all.sig.abs1.t6, aes(y=-log10(we.eBH), x=effect),color='blue') + 
+  geom_hline(yintercept = -log10(0.05),color='gray', linetype='dashed') + geom_vline(xintercept = 2, color='gray', linetype='dashed') +  geom_vline(xintercept = -2,color='gray', linetype='dashed')+
+  geom_text_repel(data=x.all.sig.abs1.t6,aes(y=-log10(we.eBH), x=effect,label=rownames(x.all.sig.abs1.t6)), min.segment.length=0, max.overlaps = 15) + 
+  theme_bw() + ggtitle(label = 'ABS1 vs. Control')
+```
+Make new phyloseq object and save
+```{r}
+feature_set_abs1<-unique(c(sig_features_abs1_t6,sig_features_abs1_t5,sig_features_abs1_t4))
+temp<-transform_sample_counts(ps_abs1, function(OTU) OTU/sum(OTU) * 100) #convert to rel abundance
+ps_abs1.aldex.sig.ra<-prune_taxa(feature_set_abs1, temp)
+```
+```{r}
+save(list=c('ps_abs1.aldex.sig.ra','x.all.abs1.t6','x.all.sig.abs1.t6','x.all.abs1.t5','x.all.sig.abs1.t5','x.all.abs1.t4','x.all.sig.abs1.t4'),file='sig.features.abs1.aldex.rds')
+```
+
+# ABS2 vs Control
+
+subset samples to compare only abs1 and control at each timepoint 
+```{r}
+ps_abs2 <- subset_samples(ps, Condition == "Control"| Condition == "ABS2")
+ps_abs2_t4 <-subset_samples(ps_abs2, Time == "T4") #  abs exposure
+ps_abs2_t5 <-subset_samples(ps_abs2, Time == "T5") # recovery point 1
+ps_abs2_t6 <-subset_samples(ps_abs2, Time == "T6") # recovery point 2
+```
+
+### ABS2 T4 - end of ABS exposure 
+```{r}
+sample_data(ps_abs2_t4) #checking if it looks like i want it to look like 
+```
+
+run aldex2
+```{r}
+pf<-ps_abs2_t4 #subset phyloseq object here, you can copy and paste the next few sections to easily repeat - just change output and input names
+conds <- sample_data(pf)$Condition
+reads<-t(data.frame(otu_table(pf)))
+reads<-reads[rowSums(reads) > 0,] #removes rows with only 0 in dataframe
+
+#run clr
+x <- aldex.clr(reads, conds, mc.samples=128, denom="all", verbose=F)
+
+#run t-test because we are only comparing one variable with two levels
+x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=FALSE)
+x.kw <- aldex.kw(x)
+
+#run effect
+x.effect <- aldex.effect(x, CI=T, verbose=FALSE)
+
+#combine table
+x.all <- data.frame(x.tt,x.kw,x.effect)
+
+# Plot 
+par(mfrow=c(1,2))
+aldex.plot(x.all, type="MA", test="glm", cutoff.pval=0.05) #can use the glm model test as the sig value 
+aldex.plot(x.all, type="MW", test="glm",cutoff.pval=0.05)
+
+par(mfrow=c(1,2))
+aldex.plot(x.all, type="MA", test="welch", cutoff.pval=0.05) #can use the glm model test as the sig value 
+aldex.plot(x.all, type="MW", test="welch",cutoff.pval=0.05)
+
+# Check for asymmetry - should be centered around 0
+par(mfrow=c(1,2))
+hist(x.all$diff.btw)
+hist(x.all$effect)
+```
+
+
+plots from aldex package
+```{r}
+par(mfrow=c(1,2))
+plot(x.all$effect, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2),
+  pch=19, xlab="Effect size", ylab=" BH P value", main="Effect size plot")
+points(x.all$effect, x.all$we.eBH, cex=0.7, col='red', pch=19)
+abline(h=0.05, lty=2, col="grey")
+abline(v=2, lty=2, col="grey")
+abline(v=-2, lty=2, col="grey")
+
+plot(x.all$diff.btw, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2),
+  pch=19, xlab="Difference", ylab="P value", main="Volcano plot")
+points(x.all$effect, x.all$we.eBH, cex=0.7, col='red', pch=19)
+abline(h=0.05, lty=2, col="grey")
+```
+subset ASVs with an effect size > 2
+pvalue for glm < 0.05 and ttest pvalue < 0.05
+nr. sigtaxa
+```{r}
+x.all.abs2.t4<-x.all
+x.all.sig.abs2.t4<-x.all.abs2.t4 %>% filter(effect > 2 | effect < -2) %>% filter(glm.eBH < 0.05) %>% filter(we.eBH < 0.05)
+x.all.sig.abs2.t4
+sig_features_abs2_t4<-rownames(x.all.sig.abs2.t4)
+length(sig_features_abs2_t4)
+```
+volcano plot for supplement
+```{r}
+ggplot(x.all.abs2.t4, aes(y=-log10(we.eBH), x=effect)) + 
+  geom_point() + 
+  geom_point(data=x.all.sig.abs2.t4, aes(y=-log10(we.eBH), x=effect),color='blue') + 
+  geom_hline(yintercept = -log10(0.05),color='gray', linetype='dashed') + geom_vline(xintercept = 2, color='gray', linetype='dashed') +  geom_vline(xintercept = -2,color='gray', linetype='dashed')+
+  geom_text_repel(data=x.all.sig.abs2.t4,aes(y=-log10(we.eBH), x=effect,label=rownames(x.all.sig.abs2.t4)), min.segment.length=0, max.overlaps = 15) + 
+  theme_bw() + ggtitle(label = 'ABS2 vs. Control')
+```
+
+### ABS2 - T5
+```{r}
+pf<-ps_abs2_t5 #subset phyloseq object here, you can copy and paste the next few sections to easily repeat - just change output and input names
+conds <- sample_data(pf)$Condition
+reads<-t(data.frame(otu_table(pf)))
+reads<-reads[rowSums(reads) > 0,] #removes rows with only 0 in dataframe
+
+#run clr
+x <- aldex.clr(reads, conds, mc.samples=128, denom="all", verbose=F)
+
+#run t-test because we are only comparing one variable with two levels
+x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=FALSE)
+x.kw <- aldex.kw(x)
+
+#run effect
+x.effect <- aldex.effect(x, CI=T, verbose=FALSE)
+
+#combine table
+x.all <- data.frame(x.tt,x.kw,x.effect)
+
+# Plot 
+par(mfrow=c(1,2))
+aldex.plot(x.all, type="MA", test="glm", cutoff.pval=0.05) #can use the glm model test as the sig value 
+aldex.plot(x.all, type="MW", test="glm",cutoff.pval=0.05)
+
+par(mfrow=c(1,2))
+aldex.plot(x.all, type="MA", test="welch", cutoff.pval=0.05) #can use the glm model test as the sig value 
+aldex.plot(x.all, type="MW", test="welch",cutoff.pval=0.05)
+
+# Check for asymmetry - should be centered around 0
+par(mfrow=c(1,2))
+hist(x.all$diff.btw)
+hist(x.all$effect)
+```
+
+
+plots from aldex package
+```{r}
+par(mfrow=c(1,2))
+plot(x.all$effect, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2),
+  pch=19, xlab="Effect size", ylab=" BH P value", main="Effect size plot")
+points(x.all$effect, x.all$we.eBH, cex=0.7, col='red', pch=19)
+abline(h=0.05, lty=2, col="grey")
+abline(v=2, lty=2, col="grey")
+abline(v=-2, lty=2, col="grey")
+
+plot(x.all$diff.btw, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2),
+  pch=19, xlab="Difference", ylab="P value", main="Volcano plot")
+points(x.all$effect, x.all$we.eBH, cex=0.7, col='red', pch=19)
+abline(h=0.05, lty=2, col="grey")
+```
+
+subset ASVs with an effect size > 2
+pvalue for glm < 0.05 and ttest pvalue < 0.05
+nr. sigtaxa
+```{r}
+x.all.abs2.t5<-x.all
+x.all.sig.abs2.t5<-x.all.abs2.t5 %>% filter(effect > 2 | effect < -2) %>% filter(glm.eBH < 0.05) %>% filter(we.eBH < 0.05)
+x.all.sig.abs2.t5
+sig_features_abs2_t5<-rownames(x.all.sig.abs2.t5)
+length(sig_features_abs2_t5)
+```
+volcano plot for supplement
+```{r}
+ggplot(x.all.abs2.t5, aes(y=-log10(we.eBH), x=effect)) + 
+  geom_point() + 
+  geom_point(data=x.all.sig.abs2.t5, aes(y=-log10(we.eBH), x=effect),color='blue') + 
+  geom_hline(yintercept = -log10(0.05),color='gray', linetype='dashed') + geom_vline(xintercept = 2, color='gray', linetype='dashed') +  geom_vline(xintercept = -2,color='gray', linetype='dashed')+
+  geom_text_repel(data=x.all.sig.abs2.t5,aes(y=-log10(we.eBH), x=effect,label=rownames(x.all.sig.abs2.t5)), min.segment.length=0, max.overlaps = 15) + 
+  theme_bw() + ggtitle(label = 'ABS2 vs. Control')
+```
+### ABS2 - T6
+```{r}
+pf<-ps_abs2_t6 #subset phyloseq object here, you can copy and paste the next few sections to easily repeat - just change output and input names
+conds <- sample_data(pf)$Condition
+reads<-t(data.frame(otu_table(pf)))
+reads<-reads[rowSums(reads) > 0,] #removes rows with only 0 in dataframe
+
+#run clr
+x <- aldex.clr(reads, conds, mc.samples=128, denom="all", verbose=F)
+
+#run t-test because we are only comparing one variable with two levels
+x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=FALSE)
+x.kw <- aldex.kw(x)
+
+#run effect
+x.effect <- aldex.effect(x, CI=T, verbose=FALSE)
+
+#combine table
+x.all <- data.frame(x.tt,x.kw,x.effect)
+
+# Plot 
+par(mfrow=c(1,2))
+aldex.plot(x.all, type="MA", test="glm", cutoff.pval=0.05) #can use the glm model test as the sig value 
+aldex.plot(x.all, type="MW", test="glm",cutoff.pval=0.05)
+
+par(mfrow=c(1,2))
+aldex.plot(x.all, type="MA", test="welch", cutoff.pval=0.05) #can use the glm model test as the sig value 
+aldex.plot(x.all, type="MW", test="welch",cutoff.pval=0.05)
+
+# Check for asymmetry - should be centered around 0
+par(mfrow=c(1,2))
+hist(x.all$diff.btw)
+hist(x.all$effect)
+```
+
+
+plots from aldex package
+```{r}
+par(mfrow=c(1,2))
+plot(x.all$effect, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2),
+  pch=19, xlab="Effect size", ylab=" BH P value", main="Effect size plot")
+points(x.all$effect, x.all$we.eBH, cex=0.7, col='red', pch=19)
+abline(h=0.05, lty=2, col="grey")
+abline(v=2, lty=2, col="grey")
+abline(v=-2, lty=2, col="grey")
+
+plot(x.all$diff.btw, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2),
+  pch=19, xlab="Difference", ylab="P value", main="Volcano plot")
+points(x.all$effect, x.all$we.eBH, cex=0.7, col='red', pch=19)
+abline(h=0.05, lty=2, col="grey")
+```
+
+subset ASVs with an effect size > 2
+pvalue for glm < 0.05 and ttest pvalue < 0.05
+nr. sigtaxa
+```{r}
+x.all.abs2.t6<-x.all
+x.all.sig.abs2.t6<-x.all.abs2.t6 %>% filter(effect > 2 | effect < -2) %>% filter(glm.eBH < 0.05) %>% filter(we.eBH < 0.05)
+x.all.sig.abs2.t6
+sig_features_abs2_t6<-rownames(x.all.sig.abs2.t6)
+length(sig_features_abs2_t6)
+```
+volcano plot for supplement
+```{r}
+ggplot(x.all.abs2.t6, aes(y=-log10(we.eBH), x=effect)) + 
+  geom_point() + 
+  geom_point(data=x.all.sig.abs2.t6, aes(y=-log10(we.eBH), x=effect),color='blue') + 
+  geom_hline(yintercept = -log10(0.05),color='gray', linetype='dashed') + geom_vline(xintercept = 2, color='gray', linetype='dashed') +  geom_vline(xintercept = -2,color='gray', linetype='dashed')+
+  geom_text_repel(data=x.all.sig.abs2.t6,aes(y=-log10(we.eBH), x=effect,label=rownames(x.all.sig.abs2.t6)), min.segment.length=0, max.overlaps = 15) + 
+  theme_bw() + ggtitle(label = 'ABS1 vs. Control')
+```
+Make new phyloseq object and save
+```{r}
+feature_set_abs2<-unique(c(sig_features_abs2_t6,sig_features_abs2_t5,sig_features_abs2_t4))
+temp<-transform_sample_counts(ps_abs2, function(OTU) OTU/sum(OTU) * 100) #convert to rel abundance
+ps_abs2.aldex.sig.ra<-prune_taxa(feature_set_abs2, temp)
+```
+```{r}
+save(list=c('ps_abs2.aldex.sig.ra','x.all.abs2.t6','x.all.sig.abs2.t6','x.all.abs2.t5','x.all.sig.abs2.t5','x.all.abs2.t4','x.all.sig.abs2.t4'),file='sig.features.abs2.aldex.rds')
+```
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- # OLD CODE BELOW -->
+
+<!-- ## ABS2 vs. Control -->
+
+<!-- subset samples to compare only abs1 and control at each timepoint  -->
+<!-- ```{r} -->
+<!-- ps_abs2 <- subset_samples(ps, Condition == "Control"| Condition == "ABS2") -->
+<!-- ps_abs2_t4 <-subset_samples(ps_abs2, Time == "T4") -->
+<!-- ps_abs2_t5 <-subset_samples(ps_abs2, Time == "T5") -->
+<!-- ps_abs2_t6 <-subset_samples(ps_abs2, Time == "T6") -->
+<!-- ``` -->
+
+<!-- ### ABS2 T4 - end of ABS exposure  -->
+<!-- ```{r} -->
+<!-- sample_data(ps_abs2_t4) #checking if it looks like i want it to look like  -->
+<!-- ``` -->
+<!-- ### ABS2 - T4 -->
+<!-- ```{r} -->
+<!-- pf<-ps_abs2_t4 #subset phyloseq object here, you can copy and paste the next few sections to easily repeat - just change output and input names -->
+<!-- conds <- sample_data(pf)$Condition -->
+<!-- reads<-t(data.frame(otu_table(pf))) -->
+<!-- reads<-reads[rowSums(reads) > 0,] #removes rows with only 0 in dataframe -->
+
+<!-- #run clr -->
+<!-- x <- aldex.clr(reads, conds, mc.samples=128, denom="all", verbose=F) -->
+
+<!-- #run t-test because we are only comparing one variable with two levels -->
+<!-- #x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=FALSE) -->
+<!-- x.kw <- aldex.kw(x) -->
+
+<!-- #run effect -->
+<!-- x.effect <- aldex.effect(x, CI=T, verbose=FALSE) -->
+
+<!-- #combine table -->
+<!-- x.all <- data.frame(x.kw,x.effect) -->
+
+<!-- # Plot  -->
+<!-- par(mfrow=c(1,2)) -->
+<!-- aldex.plot(x.all, type="MA", test="glm", cutoff.pval=0.05) #can use the glm model test as the sig value -  -->
+<!-- aldex.plot(x.all, type="MW", test="glm",cutoff.pval=0.05) -->
+<!-- ``` -->
+
+<!-- Check for asymmetry - should be centered around 0 -->
+<!-- ```{r} -->
+<!-- par(mfrow=c(1,2)) -->
+<!-- hist(x.all$diff.btw) -->
+<!-- hist(x.all$effect) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- par(mfrow=c(1,2)) -->
+<!-- plot(x.all$effect, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2), -->
+<!--   pch=19, xlab="Effect size", ylab=" BH P value", main="Effect size plot") -->
+<!-- abline(h=0.05, lty=2, col="grey") -->
+<!-- abline(v=2, lty=2, col="grey") -->
+<!-- abline(v=-2, lty=2, col="grey") -->
+
+<!-- plot(x.all$diff.btw, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2), -->
+<!--   pch=19, xlab="Difference", ylab="P value", main="Volcano plot") -->
+<!-- abline(h=0.05, lty=2, col="grey") -->
+<!-- ``` -->
+
+<!-- subset ASVs with an effect size > 1 -->
+<!-- ```{r} -->
+<!-- x.all.sig<-x.all %>% filter(effect > 2 | effect < -2) %>% filter(glm.eBH < 0.05) -->
+<!-- x.all.sig -->
+<!-- ``` -->
+<!-- significant taxa for abs2_t4 comparison -->
+<!-- ```{r} -->
+<!-- sig_features_abs2_t4<-rownames(x.all.sig) -->
+<!-- length(sig_features_abs2_t4) -->
+<!-- ``` -->
+
+<!-- ### ABS2 - T5 -->
+<!-- t5 - First Recovery Tp -->
+<!-- ```{r} -->
+<!-- sample_data(ps_abs2_t5) #checking if it looks like i want it to look like  -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- pf<-ps_abs2_t5 #subset phyloseq object here, you can copy and paste the next few sections to easily repeat - just change output and input names -->
+<!-- conds <- sample_data(pf)$Condition -->
+<!-- reads<-t(data.frame(otu_table(pf))) -->
+<!-- reads<-reads[rowSums(reads) > 0,] #removes rows with only 0 in dataframe -->
+
+<!-- #run clr -->
+<!-- x <- aldex.clr(reads, conds, mc.samples=128, denom="all", verbose=F) -->
+
+<!-- #run t-test because we are only comparing one variable with two levels -->
+<!-- #x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=FALSE) -->
+<!-- x.kw <- aldex.kw(x) -->
+
+<!-- #run effect -->
+<!-- x.effect <- aldex.effect(x, CI=T, verbose=FALSE) -->
+
+<!-- #combine table -->
+<!-- x.all <- data.frame(x.kw,x.effect) -->
+
+<!-- # Plot  -->
+<!-- par(mfrow=c(1,2)) -->
+<!-- aldex.plot(x.all, type="MA", test="glm", cutoff.pval=0.05) #can use the glm model test as the sig value -  -->
+<!-- aldex.plot(x.all, type="MW", test="glm",cutoff.pval=0.05) -->
+<!-- ``` -->
+<!-- Check for asymmetry - should be centered around 0 -->
+<!-- ```{r} -->
+<!-- par(mfrow=c(1,2)) -->
+<!-- hist(x.all$diff.btw) -->
+<!-- hist(x.all$effect) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- par(mfrow=c(1,2)) -->
+<!-- plot(x.all$effect, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2), -->
+<!--   pch=19, xlab="Effect size", ylab=" BH P value", main="Effect size plot") -->
+<!-- abline(h=0.05, lty=2, col="grey") -->
+<!-- abline(v=2, lty=2, col="grey") -->
+<!-- abline(v=-2, lty=2, col="grey") -->
+
+<!-- plot(x.all$diff.btw, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2), -->
+<!--   pch=19, xlab="Difference", ylab="P value", main="Volcano plot") -->
+<!-- abline(h=0.05, lty=2, col="grey") -->
+<!-- ``` -->
+
+<!-- subset ASVs with an effect size > 1 -->
+<!-- ```{r} -->
+<!-- x.all.sig<-x.all %>% filter(effect > 2 | effect < -2) %>% filter(glm.eBH < 0.05) -->
+<!-- x.all.sig -->
+<!-- ``` -->
+
+<!-- significant taxa for abs2_t5 comparison -->
+<!-- ```{r} -->
+<!-- sig_features_abs2_t5<-rownames(x.all.sig) -->
+<!-- length(sig_features_abs2_t5) -->
+<!-- ``` -->
+
+
+<!-- ### ABS2 - T6 -->
+<!-- t6 - Last Recovery Tp -->
+<!-- ```{r} -->
+<!-- sample_data(ps_abs2_t6) #checking if it looks like i want it to look like  -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- pf<-ps_abs2_t6 #subset phyloseq object here, you can copy and paste the next few sections to easily repeat - just change output and input names -->
+<!-- conds <- sample_data(pf)$Condition -->
+<!-- reads<-t(data.frame(otu_table(pf))) -->
+<!-- reads<-reads[rowSums(reads) > 0,] #removes rows with only 0 in dataframe -->
+
+<!-- #run clr -->
+<!-- x <- aldex.clr(reads, conds, mc.samples=128, denom="all", verbose=F) -->
+
+<!-- #run t-test because we are only comparing one variable with two levels -->
+<!-- #x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=FALSE) -->
+<!-- x.kw <- aldex.kw(x) -->
+
+<!-- #run effect -->
+<!-- x.effect <- aldex.effect(x, CI=T, verbose=FALSE) -->
+
+<!-- #combine table -->
+<!-- x.all <- data.frame(x.kw,x.effect) -->
+
+<!-- # Plot  -->
+<!-- par(mfrow=c(1,2)) -->
+<!-- aldex.plot(x.all, type="MA", test="glm", cutoff.pval=0.05) #can use the glm model test as the sig value -  -->
+<!-- aldex.plot(x.all, type="MW", test="glm",cutoff.pval=0.05) -->
+<!-- ``` -->
+<!-- Check for asymmetry - should be centered around 0 -->
+<!-- ```{r} -->
+<!-- par(mfrow=c(1,2)) -->
+<!-- hist(x.all$diff.btw) -->
+<!-- hist(x.all$effect) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- par(mfrow=c(1,2)) -->
+<!-- plot(x.all$effect, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2), -->
+<!--   pch=19, xlab="Effect size", ylab=" BH P value", main="Effect size plot") -->
+<!-- abline(h=0.05, lty=2, col="grey") -->
+<!-- abline(v=2, lty=2, col="grey") -->
+<!-- abline(v=-2, lty=2, col="grey") -->
+
+<!-- plot(x.all$diff.btw, x.all$glm.eBH, log="y", cex=0.7, col=rgb(0,0,1,0.2), -->
+<!--   pch=19, xlab="Difference", ylab="P value", main="Volcano plot") -->
+<!-- abline(h=0.05, lty=2, col="grey") -->
+<!-- ``` -->
+
+<!-- subset ASVs with an effect size > 1 -->
+<!-- ```{r} -->
+<!-- x.all.sig<-x.all %>% filter(effect > 2 | effect < -2) %>% filter(glm.eBH < 0.05) -->
+<!-- x.all.sig -->
+<!-- ``` -->
+<!-- significant taxa for abs2_t6 comparison -->
+<!-- ```{r} -->
+<!-- sig_features_abs2_t6<-rownames(x.all.sig) -->
+<!-- length(sig_features_abs2_t6) -->
+<!-- ``` -->
+
+<!-- ## Combine sig features and subset PS object for each combo -->
+<!-- definitely differences across tps  -->
+<!-- ```{r} -->
+<!-- feature_set_abs1<-c(sig_features_abs1_t6,sig_features_abs1_t5,sig_features_abs1_t4) -->
+<!-- ps_abs1.temp<-transform_sample_counts(ps_abs1, function(OTU) OTU/sum(OTU) * 100) #convert to rel abundance -->
+<!-- ps_abs1.aldex.sig.ra<-prune_taxa(feature_set_abs1, ps_abs1.temp) -->
+
+<!-- feature_set_abs2<-c(sig_features_abs2_t6,sig_features_abs2_t5,sig_features_abs2_t4) -->
+<!-- ps_abs2.temp<-transform_sample_counts(ps_abs2, function(OTU) OTU/sum(OTU) * 100) #convert to rel abundance -->
+<!-- ps_abs2.aldex.sig.ra<-prune_taxa(feature_set_abs2, ps_abs2.temp) -->
+
+
+
+<!-- # save as rdata file -->
+<!-- save(list=c('ps_abs1.aldex.sig.ra','ps_abs1.aldex.sig.ra','ps_priming.aldex.sig.ra',),file='sig.features.aldex.rds') -->
+<!-- ```  -->
+
+
+<!-- # sand box -->
+<!-- ## two way anova formulation  -->
+<!-- prevalence filtering - remove low abundant taxa -->
+<!-- ```{r} -->
+<!-- ps_abs1 -->
+<!-- ps_abs1.reduced <- filter_taxa(ps_abs1, function(x) sum(x) > 20, TRUE) # removes taxa with low read counts -->
+<!-- ``` -->
+
+
+
+<!-- ```{r} -->
+<!-- pf<-ps_abs1 #subset phyloseq object here, you can copy and paste the next few sections to easily repeat - just change output and input names -->
+<!-- covariates<-data.frame(time=sample_data(pf)$Time, condition=sample_data(pf)$Condition) -->
+<!-- #covariates$condition<-factor(covariates$condition, ordered=T, levels=c('Control','ABS1')) -->
+<!-- mm <- model.matrix(~time*condition,covariates) -->
+<!-- reads<-t(data.frame(otu_table(pf))) -->
+<!-- summary(rowSums(reads)) -->
+<!-- #reads<-reads[rowSums(reads) > 0,] #removes rows with only 0 in dataframe -->
+<!-- x <- aldex.clr(reads, mm, mc.samples=5, denom="all", verbose=F) -->
+<!-- glm.test <- aldex.glm(x, mm) -->
+
+<!-- #run effect -->
+<!-- glm.effect <- aldex.glm.effect(x) -->
+
+
+
+
+<!-- #example plot - abs1 T6 -->
+<!-- aldex.plot(glm.effect[["timeT6:conditionControl"]], test="effect", cutoff=2) -->
+<!-- sig <- glm.test[,colnames(glm.test) =="timeT6:conditionControl:pval.holm"]<0.05 -->
+<!-- points(glm.effect[["timeT6:conditionControl"]]$diff.win[sig], -->
+<!--     glm.effect[["timeT6:conditionControl"]]$diff.btw[sig], col="blue") -->
+
+
+<!-- sig <- glm.test[,colnames(glm.test) ==""]<0.2 -->
+<!-- points(glm.effect[["conditionControl"]]$diff.win[sig], -->
+<!--     glm.effect[["conditionControl"]]$diff.btw[sig], col="blue") -->
+
+<!-- #combine table -->
+<!-- x.all <- data.frame(glm.test,glm.effect) -->
+
+<!-- # Plot  -->
+<!-- par(mfrow=c(1,2)) -->
+<!-- aldex.plot(x.all, type="MA", test="glm", cutoff.pval=0.05) #can use the glm model test as the sig value -->
+<!-- aldex.plot(x.all, type="MW", test="glm",cutoff.pval=0.05) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- data(selex) -->
+<!-- selex.sub <- selex[1:500, ] -->
+<!--  covariates <- data.frame("A" = sample(0:1, 14, replace = TRUE), -->
+<!--      "B" = c(rep(0, 7), rep(1, 7)), -->
+<!--      "Z" = sample(c(1,2,3), 14, replace=TRUE)) -->
+<!--  mm <- model.matrix(~ A + Z + B, covariates) -->
+<!--  x <- aldex.clr(selex.sub, mm, mc.samples=4, denom="all", verbose=F) -->
+<!--  glm.test <- aldex.glm(x, mm) -->
+<!-- glm.effect <- aldex.glm.effect(x) -->
+<!-- aldex.plot(glm.effect[["B"]], test="effect", cutoff=2) -->
+<!-- sig <- glm.test[,20]<0.05 -->
+<!-- points(glm.effect[["B"]]$diff.win[sig], -->
+<!--     glm.effect[["B"]]$diff.btw[sig], col="blue") -->
+<!-- sig <- glm.test[,20]<0.2 -->
+<!-- points(glm.effect[["B"]]$diff.win[sig], -->
+<!--     glm.effect[["B"]]$diff.btw[sig], col="blue") -->
+<!-- ``` -->
+
+
