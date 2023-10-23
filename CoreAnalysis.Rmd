@@ -175,7 +175,6 @@ range(sample_sums(subset_samples(ps.core, Condition=='ABS1')))
 range(sample_sums(subset_samples(ps.core, Condition=='ABS2')))
 ```
 ```{r}
-library(microbiome)
 microbiome::plot_composition(ps.core, 
     plot.type = "barplot", sample.sort = "neatmap",group_by = 'Condition') 
 ```
@@ -267,7 +266,7 @@ asv.order<-na.omit(as.vector(asv.order$OTU))
 asv.order
 ```
 ```{r}
-d<-ggtree::ggtree(ps.core) + ggtree::geom_tiplab(align=TRUE, hjust=-.3) + ggtree::hexpand(.01) 
+d<-ggtree::ggtree(ps.core) + ggtree::geom_tiplab(align=T, hjust=-.3) + ggtree::hexpand(.01) 
 d
 ggtree::ggtree(ps.core) + ggtree::geom_tiplab(align=F, hjust=-.3, aes(label=Family)) + ggtree::hexpand(.01) 
 ```
@@ -379,11 +378,11 @@ DEEEEE
 e2<-e+theme(panel.grid = element_blank(),rect = element_blank(),panel.grid.minor = element_blank(),panel.grid.major = element_blank())
 e2
 
-fb2<-fb + guides(color=F, fill=F, shape=F)
+fb2<-fb + guides(color="none", fill="none", shape="none")
 
 a + fb2 + c + d + e2 + plot_layout(design=layout3)
 
-ggsave('maggie_plots/Figure2-new.pdf', width=11,height=10)
+ggsave('Figures/Figure2-new.pdf', width=11,height=10)
 ```
 
 
@@ -393,7 +392,7 @@ ggsave('maggie_plots/Figure2-new.pdf', width=11,height=10)
 df.taxa<-df.taxa %>% unite('string',c(Phylum,Class,Order,Family,Genus,Species), sep='_;',na.rm=F, remove=F)
 
 head(df.taxa)
-write.csv(df.taxa, 'maggie_plots/core.taxa.csv')
+write.csv(df.taxa, 'Figures/core.taxa.csv')
 ```
 
 
@@ -416,7 +415,7 @@ ps.core %>%
   theme_new + guides(fill=F)+
   # Removes sample names and ticks
   theme( axis.text.x = element_blank(), axis.ticks.x=element_blank(), plot.background = element_blank()) 
-ggsave('maggie_plots/figs1.pdf',height=6,width=12)
+ggsave('Figures/figS1.pdf',height=6,width=12)
 ```
 
 
