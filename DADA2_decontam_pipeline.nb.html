@@ -1511,7 +1511,7 @@ window.initializeCodeFolding = function(show) {
     $(this).detach().appendTo(div);
 
     // add a show code button right above
-    var showCodeText = $('<span>' + (showThis ? 'Hide' : 'Code') + '</span>');
+    var showCodeText = $('<span>' + (showThis ? 'Hide' : 'Show') + '</span>');
     var showCodeButton = $('<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm code-folding-btn pull-right float-right"></button>');
     showCodeButton.append(showCodeText);
     showCodeButton
@@ -1537,7 +1537,7 @@ window.initializeCodeFolding = function(show) {
     //   * Change text
     //   * add a class for intermediate states styling
     div.on('hide.bs.collapse', function () {
-      showCodeText.text('Code');
+      showCodeText.text('Show');
       showCodeButton.addClass('btn-collapsing');
     });
     div.on('hidden.bs.collapse', function () {
@@ -1755,9 +1755,149 @@ display: none;
 <p>#Loading Libraries</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShERUNJUEhFUilcblxuYGBgIn0= -->
-<pre class="r"><code>library(DECIPHER)
-</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeSh0aWR5cilcbmxpYnJhcnkodGlkeXZlcnNlKVxuYGBgIn0= -->
+<pre class="r"><code>library(tidyr)
+library(tidyverse)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoi4pSA4pSAIEF0dGFjaGluZyBjb3JlIHRpZHl2ZXJzZSBwYWNrYWdlcyDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAgdGlkeXZlcnNlIDIuMC4wIOKUgOKUgFxu4pyUIGRwbHlyICAgICAxLjEuMyAgICAg4pyUIHB1cnJyICAgICAxLjAuMlxu4pyUIGZvcmNhdHMgICAxLjAuMCAgICAg4pyUIHJlYWRyICAgICAyLjEuNFxu4pyUIGdncGxvdDIgICAzLjQuNCAgICAg4pyUIHN0cmluZ3IgICAxLjUuMFxu4pyUIGx1YnJpZGF0ZSAxLjkuMyAgICAg4pyUIHRpYmJsZSAgICAzLjIuMeKUgOKUgCBDb25mbGljdHMg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSAIHRpZHl2ZXJzZV9jb25mbGljdHMoKSDilIDilIBcbuKcliBkcGx5cjo6ZmlsdGVyKCkgbWFza3Mgc3RhdHM6OmZpbHRlcigpXG7inJYgZHBseXI6OmxhZygpICAgIG1hc2tzIHN0YXRzOjpsYWcoKVxu4pyWIGRwbHlyOjpzZWxlY3QoKSBtYXNrcyBNQVNTOjpzZWxlY3QoKVxu4oS5IFVzZSB0aGUgXHUwMDFiXTg7O2h0dHA6Ly9jb25mbGljdGVkLnItbGliLm9yZy9cdTAwMDdjb25mbGljdGVkIHBhY2thZ2VcdTAwMWJdODs7XHUwMDA3IHRvIGZvcmNlIGFsbCBjb25mbGljdHMgdG8gYmVjb21lIGVycm9yc1xuIn0= -->
+<pre><code>── Attaching core tidyverse packages ───────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.3     ✔ purrr     1.0.2
+✔ forcats   1.0.0     ✔ readr     2.1.4
+✔ ggplot2   3.4.4     ✔ stringr   1.5.0
+✔ lubridate 1.9.3     ✔ tibble    3.2.1── Conflicts ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+✖ dplyr::select() masks MASS::select()
+ℹ Use the ]8;;http://conflicted.r-lib.org/conflicted package]8;; to force all conflicts to become errors</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShrYWJsZUV4dHJhKVxuYGBgIn0= -->
+<pre class="r"><code>library(kableExtra)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiXG5BdHRhY2hpbmcgcGFja2FnZTog4oCYa2FibGVFeHRyYeKAmVxuXG5UaGUgZm9sbG93aW5nIG9iamVjdCBpcyBtYXNrZWQgZnJvbSDigJhwYWNrYWdlOmRwbHly4oCZOlxuXG4gICAgZ3JvdXBfcm93c1xuIn0= -->
+<pre><code>
+Attaching package: ‘kableExtra’
+
+The following object is masked from ‘package:dplyr’:
+
+    group_rows</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShnZ3Bsb3QyKVxubGlicmFyeShkcGx5cilcbmxpYnJhcnkoZGFkYTIpXG5gYGAifQ== -->
+<pre class="r"><code>library(ggplot2)
+library(dplyr)
+library(dada2)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiTG9hZGluZyByZXF1aXJlZCBwYWNrYWdlOiBSY3BwXG4ifQ== -->
+<pre><code>Loading required package: Rcpp</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShwaHlsb3NlcSlcbmxpYnJhcnkoZGVjb250YW0pXG5saWJyYXJ5KGZhc3RxY3IpXG5saWJyYXJ5KHJlYWR4bClcbmxpYnJhcnkocGhhbmdvcm4pXG5gYGAifQ== -->
+<pre class="r"><code>library(phyloseq)
+library(decontam)
+library(fastqcr)
+library(readxl)
+library(phangorn)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiTG9hZGluZyByZXF1aXJlZCBwYWNrYWdlOiBhcGVcblxuQXR0YWNoaW5nIHBhY2thZ2U6IOKAmGFwZeKAmVxuXG5UaGUgZm9sbG93aW5nIG9iamVjdCBpcyBtYXNrZWQgZnJvbSDigJhwYWNrYWdlOmRwbHly4oCZOlxuXG4gICAgd2hlcmVcbiJ9 -->
+<pre><code>Loading required package: ape
+
+Attaching package: ‘ape’
+
+The following object is masked from ‘package:dplyr’:
+
+    where</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShCaW9zdHJpbmdzKVxuYGBgIn0= -->
+<pre class="r"><code>library(Biostrings)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiTG9hZGluZyByZXF1aXJlZCBwYWNrYWdlOiBCaW9jR2VuZXJpY3NcblxuQXR0YWNoaW5nIHBhY2thZ2U6IOKAmEJpb2NHZW5lcmljc+KAmVxuXG5UaGUgZm9sbG93aW5nIG9iamVjdHMgYXJlIG1hc2tlZCBmcm9tIOKAmHBhY2thZ2U6bHVicmlkYXRl4oCZOlxuXG4gICAgaW50ZXJzZWN0LCBzZXRkaWZmLCB1bmlvblxuXG5UaGUgZm9sbG93aW5nIG9iamVjdHMgYXJlIG1hc2tlZCBmcm9tIOKAmHBhY2thZ2U6ZHBseXLigJk6XG5cbiAgICBjb21iaW5lLCBpbnRlcnNlY3QsIHNldGRpZmYsIHVuaW9uXG5cblRoZSBmb2xsb3dpbmcgb2JqZWN0IGlzIG1hc2tlZCBmcm9tIOKAmHBhY2thZ2U6TkFEQeKAmTpcblxuICAgIHNkXG5cblRoZSBmb2xsb3dpbmcgb2JqZWN0cyBhcmUgbWFza2VkIGZyb20g4oCYcGFja2FnZTpzdGF0c+KAmTpcblxuICAgIElRUiwgbWFkLCBzZCwgdmFyLCB4dGFic1xuXG5UaGUgZm9sbG93aW5nIG9iamVjdHMgYXJlIG1hc2tlZCBmcm9tIOKAmHBhY2thZ2U6YmFzZeKAmTpcblxuICAgIGFueUR1cGxpY2F0ZWQsIGFwcGVuZCwgYXMuZGF0YS5mcmFtZSwgYmFzZW5hbWUsIGNiaW5kLCBjb2xuYW1lcywgZGlybmFtZSwgZG8uY2FsbCwgZHVwbGljYXRlZCwgZXZhbCwgZXZhbHEsIEZpbHRlciwgRmluZCwgZ2V0LCBncmVwLFxuICAgIGdyZXBsLCBpbnRlcnNlY3QsIGlzLnVuc29ydGVkLCBsYXBwbHksIE1hcCwgbWFwcGx5LCBtYXRjaCwgbWdldCwgb3JkZXIsIHBhc3RlLCBwbWF4LCBwbWF4LmludCwgcG1pbiwgcG1pbi5pbnQsIFBvc2l0aW9uLCByYW5rLFxuICAgIHJiaW5kLCBSZWR1Y2UsIHJvd25hbWVzLCBzYXBwbHksIHNldGRpZmYsIHNvcnQsIHRhYmxlLCB0YXBwbHksIHVuaW9uLCB1bmlxdWUsIHVuc3BsaXQsIHdoaWNoLm1heCwgd2hpY2gubWluXG5cbkxvYWRpbmcgcmVxdWlyZWQgcGFja2FnZTogUzRWZWN0b3JzXG5Mb2FkaW5nIHJlcXVpcmVkIHBhY2thZ2U6IHN0YXRzNFxuXG5BdHRhY2hpbmcgcGFja2FnZTog4oCYUzRWZWN0b3Jz4oCZXG5cblRoZSBmb2xsb3dpbmcgb2JqZWN0cyBhcmUgbWFza2VkIGZyb20g4oCYcGFja2FnZTpsdWJyaWRhdGXigJk6XG5cbiAgICBzZWNvbmQsIHNlY29uZDwtXG5cblRoZSBmb2xsb3dpbmcgb2JqZWN0cyBhcmUgbWFza2VkIGZyb20g4oCYcGFja2FnZTpkcGx5cuKAmTpcblxuICAgIGZpcnN0LCByZW5hbWVcblxuVGhlIGZvbGxvd2luZyBvYmplY3QgaXMgbWFza2VkIGZyb20g4oCYcGFja2FnZTp0aWR5cuKAmTpcblxuICAgIGV4cGFuZFxuXG5UaGUgZm9sbG93aW5nIG9iamVjdHMgYXJlIG1hc2tlZCBmcm9tIOKAmHBhY2thZ2U6YmFzZeKAmTpcblxuICAgIGV4cGFuZC5ncmlkLCBJLCB1bm5hbWVcblxuTG9hZGluZyByZXF1aXJlZCBwYWNrYWdlOiBJUmFuZ2VzXG5cbkF0dGFjaGluZyBwYWNrYWdlOiDigJhJUmFuZ2Vz4oCZXG5cblRoZSBmb2xsb3dpbmcgb2JqZWN0IGlzIG1hc2tlZCBmcm9tIOKAmHBhY2thZ2U6cGh5bG9zZXHigJk6XG5cbiAgICBkaXN0YW5jZVxuXG5UaGUgZm9sbG93aW5nIG9iamVjdCBpcyBtYXNrZWQgZnJvbSDigJhwYWNrYWdlOmx1YnJpZGF0ZeKAmTpcblxuICAgICV3aXRoaW4lXG5cblRoZSBmb2xsb3dpbmcgb2JqZWN0cyBhcmUgbWFza2VkIGZyb20g4oCYcGFja2FnZTpkcGx5cuKAmTpcblxuICAgIGNvbGxhcHNlLCBkZXNjLCBzbGljZVxuXG5UaGUgZm9sbG93aW5nIG9iamVjdCBpcyBtYXNrZWQgZnJvbSDigJhwYWNrYWdlOnB1cnJy4oCZOlxuXG4gICAgcmVkdWNlXG5cbkxvYWRpbmcgcmVxdWlyZWQgcGFja2FnZTogWFZlY3RvclxuXG5BdHRhY2hpbmcgcGFja2FnZTog4oCYWFZlY3RvcuKAmVxuXG5UaGUgZm9sbG93aW5nIG9iamVjdCBpcyBtYXNrZWQgZnJvbSDigJhwYWNrYWdlOnB1cnJy4oCZOlxuXG4gICAgY29tcGFjdFxuXG5Mb2FkaW5nIHJlcXVpcmVkIHBhY2thZ2U6IEdlbm9tZUluZm9EYlxuXG5BdHRhY2hpbmcgcGFja2FnZTog4oCYQmlvc3RyaW5nc+KAmVxuXG5UaGUgZm9sbG93aW5nIG9iamVjdCBpcyBtYXNrZWQgZnJvbSDigJhwYWNrYWdlOmFwZeKAmTpcblxuICAgIGNvbXBsZW1lbnRcblxuVGhlIGZvbGxvd2luZyBvYmplY3QgaXMgbWFza2VkIGZyb20g4oCYcGFja2FnZTpiYXNl4oCZOlxuXG4gICAgc3Ryc3BsaXRcbiJ9 -->
+<pre><code>Loading required package: BiocGenerics
+
+Attaching package: ‘BiocGenerics’
+
+The following objects are masked from ‘package:lubridate’:
+
+    intersect, setdiff, union
+
+The following objects are masked from ‘package:dplyr’:
+
+    combine, intersect, setdiff, union
+
+The following object is masked from ‘package:NADA’:
+
+    sd
+
+The following objects are masked from ‘package:stats’:
+
+    IQR, mad, sd, var, xtabs
+
+The following objects are masked from ‘package:base’:
+
+    anyDuplicated, append, as.data.frame, basename, cbind, colnames, dirname, do.call, duplicated, eval, evalq, Filter, Find, get, grep,
+    grepl, intersect, is.unsorted, lapply, Map, mapply, match, mget, order, paste, pmax, pmax.int, pmin, pmin.int, Position, rank,
+    rbind, Reduce, rownames, sapply, setdiff, sort, table, tapply, union, unique, unsplit, which.max, which.min
+
+Loading required package: S4Vectors
+Loading required package: stats4
+
+Attaching package: ‘S4Vectors’
+
+The following objects are masked from ‘package:lubridate’:
+
+    second, second&lt;-
+
+The following objects are masked from ‘package:dplyr’:
+
+    first, rename
+
+The following object is masked from ‘package:tidyr’:
+
+    expand
+
+The following objects are masked from ‘package:base’:
+
+    expand.grid, I, unname
+
+Loading required package: IRanges
+
+Attaching package: ‘IRanges’
+
+The following object is masked from ‘package:phyloseq’:
+
+    distance
+
+The following object is masked from ‘package:lubridate’:
+
+    %within%
+
+The following objects are masked from ‘package:dplyr’:
+
+    collapse, desc, slice
+
+The following object is masked from ‘package:purrr’:
+
+    reduce
+
+Loading required package: XVector
+
+Attaching package: ‘XVector’
+
+The following object is masked from ‘package:purrr’:
+
+    compact
+
+Loading required package: GenomeInfoDb
+
+Attaching package: ‘Biostrings’
+
+The following object is masked from ‘package:ape’:
+
+    complement
+
+The following object is masked from ‘package:base’:
+
+    strsplit</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShERUNJUEhFUilcbmBgYCJ9 -->
+<pre class="r"><code>library(DECIPHER)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-output-begin eyJkYXRhIjoiTG9hZGluZyByZXF1aXJlZCBwYWNrYWdlOiBSU1FMaXRlXG5Mb2FkaW5nIHJlcXVpcmVkIHBhY2thZ2U6IHBhcmFsbGVsXG4ifQ== -->
 <pre><code>Loading required package: RSQLite
@@ -1768,6 +1908,43 @@ Loading required package: parallel</code></pre>
 <p>#Extracting and filtering reads</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBzZXR0aW5nIHVwIGZpbGUgcGF0aHMgYW5kIGRpcmVjdG9yaWVzXG5yZWFkc19wYXRoIDwtXCIuL0RhdGEvc2VxdWVuY2VzL1wiICMgcGF0aCB0byBmaW5kIEZpbGVzXG5saXN0LmZpbGVzKHJlYWRzX3BhdGgpXG4jIHN0b3JlcyBwYXRoIGZvciBmb3J3YXJkIGFuZCByZXZlcnNlIHNlcXNcbkZzX3BhdGggPC0gc29ydChsaXN0LmZpbGVzKHJlYWRzX3BhdGgsIHBhdHRlcm49XCJSMV8wMDEuZmFzdHEuZ3pcIiwgZnVsbC5uYW1lcyA9IFRSVUUpKVxuUnNfcGF0aCA8LSBzb3J0KGxpc3QuZmlsZXMocmVhZHNfcGF0aCwgcGF0dGVybj1cIlIyXzAwMS5mYXN0cS5nelwiLCBmdWxsLm5hbWVzID0gVFJVRSkpXG4jIGNyZWF0ZSBkaXJlY3RvcmllcyBmb3IgcHJvY2Vzc2VkIGZpbGVzXG5Gc19wYXRoX2ZpbHRlcmVkIDwtIGZpbGUucGF0aChyZWFkc19wYXRoLCBcImZpbHRlcmVkX0ZzXCIpXG5Sc19wYXRoX2ZpbHRlcmVkIDwtIGZpbGUucGF0aChyZWFkc19wYXRoLCBcImZpbHRlcmVkX1JzXCIpXG5cbiMgZXh0cmFjdGluZyBmaWxlIG5hbWVzXG5QUkowMDJfc2FtcGxlcyA8LSBzdHJfcmVwbGFjZShzdHJpbmcgPSBiYXNlbmFtZShGc19wYXRoKSwgXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgcGF0dGVybiA9IFwiX0wwMDFfUjFfMDAxLmZhc3RxLmd6XCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgcmVwbGFjZW1lbnQgPSBcIlwiKVxuXG4jIHBsb3R0aW5nIFF1YWxpdHkgcHJvZmlsZXNcbnNldC5zZWVkKDEyMzQpXG5wbG90UXVhbGl0eVByb2ZpbGUoRnNfcGF0aFtzYW1wbGUoMTo0OCwgMTIsIHJlcGxhY2UgPSBGQUxTRSldKVxucGxvdFF1YWxpdHlQcm9maWxlKFJzX3BhdGhbc2FtcGxlKDE6NDgsIDEyLCByZXBsYWNlID0gRkFMU0UpXSlcblxuXG4jZmlsdGVyaW5nIG91dCByZWFkc1xub3V0IDwtIGZpbHRlckFuZFRyaW0oZndkPUZzX3BhdGgsIFxuICAgICAgICAgICAgICBmaWx0PUZzX3BhdGhfZmlsdGVyZWQsXG4gICAgICAgICAgICAgIHJldj1Sc19wYXRoLCBcbiAgICAgICAgICAgICAgZmlsdC5yZXY9UnNfcGF0aF9maWx0ZXJlZCxcbiAgICAgICAgICAgICAgdHJ1bmNMZW49YygxNTAsMTUwKSwgIyBmb3J3YXJkIGFuZCByZXZlcnNlIHJlYWQgdHJ1bmNhdGUgaWYgbGVzcyB0aGFuIDE1MGJwXG4gICAgICAgICAgICAgIG1heEVFPWMoMiwyKSwgXG4gICAgICAgICAgICAgIHRydW5jUT0yLCBcbiAgICAgICAgICAgICAgbWF4Tj0wLCBcbiAgICAgICAgICAgICAgcm0ucGhpeD1UUlVFLFxuICAgICAgICAgICAgICBjb21wcmVzcz1UUlVFLCBcbiAgICAgICAgICAgICAgdmVyYm9zZT1UUlVFLCBcbiAgICAgICAgICAgICAgbXVsdGl0aHJlYWQ9VFJVRSlcbm91dCA8LSBvdXRbLWMoOTcpLF0jIHJlbW92aW5nIHVuZGV0ZXJtaW5lZHNcbmBgYCJ9 -->
+<pre class="r"><code># setting up file paths and directories
+reads_path &lt;-&quot;./Data/sequences/&quot; # path to find Files
+list.files(reads_path)
+# stores path for forward and reverse seqs
+Fs_path &lt;- sort(list.files(reads_path, pattern=&quot;R1_001.fastq.gz&quot;, full.names = TRUE))
+Rs_path &lt;- sort(list.files(reads_path, pattern=&quot;R2_001.fastq.gz&quot;, full.names = TRUE))
+# create directories for processed files
+Fs_path_filtered &lt;- file.path(reads_path, &quot;filtered_Fs&quot;)
+Rs_path_filtered &lt;- file.path(reads_path, &quot;filtered_Rs&quot;)
+
+# extracting file names
+PRJ002_samples &lt;- str_replace(string = basename(Fs_path), 
+                                  pattern = &quot;_L001_R1_001.fastq.gz&quot;,
+                                  replacement = &quot;&quot;)
+
+# plotting Quality profiles
+set.seed(1234)
+plotQualityProfile(Fs_path[sample(1:48, 12, replace = FALSE)])
+plotQualityProfile(Rs_path[sample(1:48, 12, replace = FALSE)])
+
+
+#filtering out reads
+out &lt;- filterAndTrim(fwd=Fs_path, 
+              filt=Fs_path_filtered,
+              rev=Rs_path, 
+              filt.rev=Rs_path_filtered,
+              truncLen=c(150,150), # forward and reverse read truncate if less than 150bp
+              maxEE=c(2,2), 
+              truncQ=2, 
+              maxN=0, 
+              rm.phix=TRUE,
+              compress=TRUE, 
+              verbose=TRUE, 
+              multithread=TRUE)
+out &lt;- out[-c(97),]# removing undetermineds</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <p>#renaming samples from Forward and Reverse paths</p>

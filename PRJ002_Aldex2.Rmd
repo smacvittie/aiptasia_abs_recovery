@@ -1,10 +1,13 @@
 ---
-title: "Aldex2 Pipeline PRJ002"
+title: "Figure 3: Differential Abundance Analysis"
 output:
   html_document:
     df_print: paged
 ---
-
+Overview: 
+1. Compare Diff. Abundance between Control and ABS1
+2. Compare Diff. Abundance between Control and ABS2
+3. Figure3 plotting Diff. Expressed taxa
 
 ```{r}
 library(tidyr)
@@ -29,13 +32,12 @@ library(ALDEx2)
 library(ggrepel)
 ```
 
-Read in Phyloseq object
+#Read in Phyloseq object for 
 ```{r}
-#ps <-readRDS("/Users/sophiemacvittie/Documents/Github/PRJ002_Ranlaysis/PRJ002_Edited_R_Files/ps.clean.noblanks.rds")
-ps<-readRDS(file = 'ps.cleantree.noblanks.rds') ## by the way you dont need to put in the full path if you are working within your repo
+ps<-readRDS(file = 'ps.cleantree.noblanks.rds') 
 ```
 
-# ABS1 vs. Control 
+# 1. ABS1 vs. Control 
 
 subset samples to compare only abs1 and control at each timepoint 
 ```{r}
@@ -273,7 +275,7 @@ ps_abs1.aldex.sig.ra<-prune_taxa(feature_set_abs1, temp)
 save(list=c('ps_abs1.aldex.sig.ra','x.all.abs1.t6','x.all.sig.abs1.t6','x.all.abs1.t5','x.all.sig.abs1.t5','x.all.abs1.t4','x.all.sig.abs1.t4'),file='sig.features.abs1.aldex.rds')
 ```
 
-# ABS2 vs Control
+# 2. ABS2 vs Control
 
 subset samples to compare only abs1 and control at each timepoint 
 ```{r}
@@ -513,5 +515,128 @@ save(list=c('ps_abs2.aldex.sig.ra','x.all.abs2.t6','x.all.sig.abs2.t6','x.all.ab
 
 
 
+#3. Figure 3
+
+load relavent data
+```{r}
+load('sig.features.abs1.aldex.rds') # contains 1 phyloseq object and all stats for each tp
+load('sig.features.abs2.aldex.rds') # contains 1 phyloseq object and all stats for each tp
+```
+
+set color pallet  
+```{r}
+taxa<-data.frame(rbind(tax_table(ps_abs1.aldex.sig.ra),tax_table(ps_abs2.aldex.sig.ra)))
+taxa$ASV<-rownames(taxa)
+taxa<-taxa %>% distinct(ASV, .keep_all = T) %>% arrange(Phylum,Class,Order,Family,Genus,Species)
+taxa$Family2<-ifelse(is.na(taxa$Family),paste(taxa$Class,'-unknown',sep=''),taxa$Family) #fix na family level classificaiton 
+taxa$Family2<-ifelse(taxa$Family2=='NA-unknown',paste(taxa$Phylum,'-unknown',sep=''),taxa$Family2) #fix na family level classificaiton 
+
+clr<-c(
+'#187B4D','#A4D7F4','#093149','mediumpurple4','mediumpurple1','#85760A', #"Mycobacteriaceae","Flavobacteriaceae","Bacteroidia-unknown","Phycisphaerae-unknown","Pirellulaceae","Rhizobiaceae"
+'#BEA90E','#F9F5DC',"#E7DA73",'#F7EB8D','#FCD9DF','#F7A1AF', #"Rhodobacteraceae","Emcibacteraceae","Sphingomonadaceae","GCA-2696645","Alteromonadaceae","Vibrionaceae" 
+'red','#F05670','#EB1E40','#38050D','gray'#"Francisellaceae","Halomonadaceae","Pseudomonadaceae","Gammaproteobacteria-unknown", "Proteobacteria-unknown" 
+)
+names(clr)<-unique(taxa$Family2)
+clr
+
+taxa<-taxa %>% unite('taxstring', Phylum,Class,Order,Family,Genus,Species,sep='_;') %>% arrange(ASV)
+
+write.csv(taxa,'maggie_plots/DA-taxa.csv')
+```
+
+ABS1 - Figure 3A
+```{r}
+# make new phyloseq object
+mdata<-data.frame(sample_data(ps_abs1.aldex.sig.ra))
+df.otu<-data.frame(Sample_names=rownames(otu_table(ps_abs1.aldex.sig.ra)),otu_table(ps_abs1.aldex.sig.ra))
+taxa.df<-data.frame(ASV=rownames(tax_table(ps_abs1.aldex.sig.ra)),tax_table(ps_abs1.aldex.sig.ra))
+
+df.otu.long<-pivot_longer(df.otu,cols=!Sample_names,names_to='ASV',values_to = 'RelAbund') #melt dataframe
+df.relabund<-df.otu.long %>% left_join(y=mdata, by='Sample_names') #add in metadata
+df.relabund<-df.relabund %>% left_join(y=taxa.df, by='ASV') #add in taxa info
+df.relabund.nozeros<-df.relabund[df.relabund$RelAbund>0,]
+
+#plot
+df.abs1<-df.relabund.nozeros[df.relabund.nozeros$Time %in% c('T4','T5','T6'),]
+df.abs1$Condition<-factor(df.abs1$Condition, ordered=T, levels=c('Control','ABS1'))
+
+# Fix Unknown Families
+df.abs1$Family2<-ifelse(is.na(df.abs1$Family),paste(df.abs1$Class,'-unknown',sep=''),df.abs1$Family)
+
+#reorder asvs according to pattern
+asv_order<-c('ASV151','ASV114','ASV48','ASV152','ASV68','ASV43','ASV44','ASV17', #susceptible
+             'ASV3',
+             'ASV5','ASV9','ASV20',
+             'ASV139','ASV18', #selected for
+             'ASV14','ASV24'
+             )
+df.abs1$ASV<-factor(df.abs1$ASV, ordered=T,levels=rev(asv_order))
+
+```
+
+```{r}
+Fig3a<-ggplot(df.abs1, aes(x = Sample_names, y = ASV, fill = Family2)) +
+  geom_point(aes(size = RelAbund*10), alpha = 0.8, shape = 21) + 
+  scale_size_continuous(limits = c(0, 70), range = c(0,10), breaks = c(0.01, 5, 10, 20, 40, 80)) +
+  facet_grid(. ~ Time + Condition, scales="free", space="free") +
+  theme_new + xlab('Sample') +
+  scale_y_discrete(limits = rev(levels(df.relabund$ASV))) +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  labs(size = "Relative Abundance", color = "Family") +
+  guides(fill = guide_legend(override.aes = list(size = 2))) + 
+  scale_fill_manual(values=clr) + guides(fill=F)
+Fig3a
+```
+
+
+Fig 3b
+```{r}
+# make new phyloseq object
+mdata<-data.frame(sample_data(ps_abs2.aldex.sig.ra))
+df.otu<-data.frame(Sample_names=rownames(otu_table(ps_abs2.aldex.sig.ra)),otu_table(ps_abs2.aldex.sig.ra))
+taxa.df<-data.frame(ASV=rownames(tax_table(ps_abs2.aldex.sig.ra)),tax_table(ps_abs2.aldex.sig.ra))
+df.otu.long<-pivot_longer(df.otu,cols=!Sample_names,names_to='ASV',values_to = 'RelAbund') #melt dataframe
+df.relabund<-df.otu.long %>% left_join(y=mdata, by='Sample_names') #add in metadata
+df.relabund<-df.relabund %>% left_join(y=taxa.df, by='ASV') #add in taxa info
+df.relabund.nozeros<-df.relabund[df.relabund$RelAbund>0,]
+
+#plot
+df.abs2<-df.relabund.nozeros[df.relabund.nozeros$Time %in% c('T4','T5','T6'),]
+df.abs2$Condition<-factor(df.abs2$Condition, ordered=T, levels=c('Control','ABS2'))
+
+# Fix Unknown Families
+df.abs2$Family2<-ifelse(is.na(df.abs2$Family),paste(df.abs2$Class,'-unknown',sep=''),df.abs2$Family)
+
+#order based on pattern
+asv_order<-c('ASV34','ASV81','ASV68','ASV206','ASV33','ASV64','ASV101','ASV90','ASV61','ASV151','ASV114',
+             'ASV104',
+             'ASV39','ASV37','ASV38','ASV43','ASV26','ASV3','ASV5','ASV11','ASV19','ASV9','ASV17','ASV59',
+             'ASV8','ASV20','ASV32',
+             'ASV36','ASV150','ASV113')
+df.abs2$ASV<-factor(df.abs2$ASV, ordered=T,levels=rev(asv_order))
+```
+```{r}
+Fig3b<-ggplot(df.abs2, aes(x = Sample_names, y = ASV, fill = Family2)) +
+  geom_point(aes(size = RelAbund*10), alpha = 0.8, shape = 21) + 
+  scale_size_continuous(limits = c(0, 70), range = c(0,10), breaks = c(0.01, 5, 10, 20, 40, 80)) +
+  facet_grid(. ~ Time + Condition, scales="free", space="free") +
+  theme_new + xlab('Sample') +
+  scale_y_discrete(limits = rev(levels(df.relabund$ASV))) +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  labs(size = "Relative Abundance", color = "Family") +
+  guides(fill = guide_legend(override.aes = list(size = 2))) + 
+  scale_fill_manual(values=clr) + guides(fill=F)
+Fig3b
+```
+Make figure 3
+```{r}
+library(patchwork)
+layout<-"AA
+BB
+BB"
+Fig3a + guides(fill=F, size=F) + Fig3b + guides(fill=F, size=F)  + plot_layout(ncol=1, design=layout)
+Fig3a + Fig3b + plot_layout(ncol=1, design=layout, guides='collect')
+ggsave('maggie_plots/Figure3-withleg.pdf',width=10,height=11)
+```
 
 

@@ -240,7 +240,7 @@ aov
 bd
 ```
 ```{r}
-tukey.bd<-TukeyHSD(bd, ordered=T)
+tukey.bd<-TukeyHSD(aov, ordered=T)
 tukey.bd
 ```
 
@@ -266,7 +266,7 @@ asv.order<-na.omit(as.vector(asv.order$OTU))
 asv.order
 ```
 ```{r}
-d<-ggtree::ggtree(ps.core) + ggtree::geom_tiplab(align=T, hjust=-.3) + ggtree::hexpand(.01) 
+d<-ggtree::ggtree(ps.core) + ggtree::geom_tiplab(align=True, hjust=-.3) + ggtree::hexpand(.01) 
 d
 ggtree::ggtree(ps.core) + ggtree::geom_tiplab(align=F, hjust=-.3, aes(label=Family)) + ggtree::hexpand(.01) 
 ```
