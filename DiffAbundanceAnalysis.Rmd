@@ -34,7 +34,7 @@ library(ggrepel)
 
 #Read in Phyloseq object for 
 ```{r}
-ps<-readRDS(file = 'ps.cleantree.noblanks.rds') 
+ps<-readRDS(file = 'rds_objects/ps.cleantree.noblanks.rds') 
 ```
 
 # 1. ABS1 vs. Control 
@@ -272,7 +272,7 @@ temp<-transform_sample_counts(ps_abs1, function(OTU) OTU/sum(OTU) * 100) #conver
 ps_abs1.aldex.sig.ra<-prune_taxa(feature_set_abs1, temp)
 ```
 ```{r}
-save(list=c('ps_abs1.aldex.sig.ra','x.all.abs1.t6','x.all.sig.abs1.t6','x.all.abs1.t5','x.all.sig.abs1.t5','x.all.abs1.t4','x.all.sig.abs1.t4'),file='sig.features.abs1.aldex.rds')
+save(list=c('ps_abs1.aldex.sig.ra','x.all.abs1.t6','x.all.sig.abs1.t6','x.all.abs1.t5','x.all.sig.abs1.t5','x.all.abs1.t4','x.all.sig.abs1.t4'),file='rds_objects/sig.features.abs1.aldex.rds')
 ```
 
 # 2. ABS2 vs Control
@@ -510,7 +510,7 @@ temp<-transform_sample_counts(ps_abs2, function(OTU) OTU/sum(OTU) * 100) #conver
 ps_abs2.aldex.sig.ra<-prune_taxa(feature_set_abs2, temp)
 ```
 ```{r}
-save(list=c('ps_abs2.aldex.sig.ra','x.all.abs2.t6','x.all.sig.abs2.t6','x.all.abs2.t5','x.all.sig.abs2.t5','x.all.abs2.t4','x.all.sig.abs2.t4'),file='sig.features.abs2.aldex.rds')
+save(list=c('ps_abs2.aldex.sig.ra','x.all.abs2.t6','x.all.sig.abs2.t6','x.all.abs2.t5','x.all.sig.abs2.t5','x.all.abs2.t4','x.all.sig.abs2.t4'),file='./rds_objects/sig.features.abs2.aldex.rds')
 ```
 
 
@@ -519,8 +519,8 @@ save(list=c('ps_abs2.aldex.sig.ra','x.all.abs2.t6','x.all.sig.abs2.t6','x.all.ab
 
 load relavent data
 ```{r}
-load('sig.features.abs1.aldex.rds') # contains 1 phyloseq object and all stats for each tp
-load('sig.features.abs2.aldex.rds') # contains 1 phyloseq object and all stats for each tp
+load('./rds_objects/sig.features.abs1.aldex.rds') # contains 1 phyloseq object and all stats for each tp
+load('./rds_objects/sig.features.abs2.aldex.rds') # contains 1 phyloseq object and all stats for each tp
 ```
 
 set color pallet  

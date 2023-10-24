@@ -42,7 +42,7 @@ theme_new<- theme_bw() + theme(panel.grid.major = element_line(color='gray90'), 
 
 read in cleaned data
 ```{r}
-ps<-readRDS(file = 'ps.cleantree.noblanks.rds')
+ps<-readRDS(file = 'rds_objects/ps.cleantree.noblanks.rds')
 ps<-prune_samples(!(sample_names(ps) %in% c('EB1_S94', 'EB1_S95','EB2_S95')),ps) #remove EB samples 
 ps
 ```
@@ -362,7 +362,7 @@ e<-ggplot(df.relabund, aes(x = Sample_names, y = ASV, fill = Family2)) +
   labs(size = "Relative Abundance", color = "Family")  + 
   scale_fill_manual(values=clr) + guides(fill=F)
 e
-#ggsave('maggie_plots/bubbles-with-legend.pdf')
+
 ```
 put all together 
 ```{r}
@@ -392,7 +392,7 @@ ggsave('Figures/Figure2-new.pdf', width=11,height=10)
 df.taxa<-df.taxa %>% unite('string',c(Phylum,Class,Order,Family,Genus,Species), sep='_;',na.rm=F, remove=F)
 
 head(df.taxa)
-write.csv(df.taxa, 'Figures/core.taxa.csv')
+write.csv(df.taxa, 'Data/core.taxa.csv')
 ```
 
 
