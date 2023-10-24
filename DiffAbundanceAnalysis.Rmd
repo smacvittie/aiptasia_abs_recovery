@@ -4,7 +4,7 @@ output:
   html_document:
     df_print: paged
 ---
-Overview: 
+Overview- DA for Macvittie et. al Microbiome Manipulation including: 
 1. Compare Diff. Abundance between Control and ABS1
 2. Compare Diff. Abundance between Control and ABS2
 3. Figure3 plotting Diff. Expressed taxa

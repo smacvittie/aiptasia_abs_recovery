@@ -2,6 +2,15 @@
 title: "DADA2 pipeline with decontam package "
 output: html_notebook
 ---
+Overview - raw sequence processing for Macvittie et. al Microbiome Manipulation including:
+1. Extracting and filtering sequences
+2. Calculating error rates and merging reads
+3. filtering sequences and assigning taxonomy
+4. building a phylogenetic tree
+5. creating a Phyloseq object
+6. running the decontam package using extraction and FSW Blanks
+
+
 
 
 

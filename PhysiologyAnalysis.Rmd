@@ -1,0 +1,345 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+Overview: Physiology Analysis for MacVittie et. al Microbiome Manipulation including:
+1.Graphing and statistics for CFU counts
+2. Graphing and statistics for Protein Biomass
+3. Graphing and statistics for Pedal laceration rate
+4.Graphing and statistics for Symbiont Density
+
+
+# SetUp
+Load packages
+```{r}
+library(tidyr)
+library(tidyverse)
+library(ggplot2)
+library(vegan)
+library(phyloseq)
+library(ape)
+library(ggh4x)
+library(ggrepel)
+library(patchwork)
+library(ggpubr)
+library(rstatix)
+library(ARTool)
+```
+
+plotting conditions
+```{r}
+trt16<-c('ABS1','ABS1 Treatment','ABS1 Recovery','ABS2','Control','ASW','Experimental', 'FASW','Priming','blank', 'FAASW' )
+l2p16<-c('indianred1','indianred1','indianred1','deeppink4','gray16','gray16','burlywood','burlywood','burlywood', 'gray81', 'darkgreen')
+names(l2p16) = trt16
+
+shpsc<-c(0,1,3,4,8,15,16)
+names(shpsc)=c('T0','T1','T2','T3','T4','T5','T6')
+
+theme_new<- theme_bw() + theme(panel.grid.major = element_line(color='gray90'), panel.grid.minor = element_line(color='gray90'), text= element_text(size = 15), axis.text.x = element_text(hjust = 1), legend.text = element_text(size = 20), axis.title = element_text(size = 15), title = element_text(size = 20),panel.border = element_blank())
+```
+#1. CFU counts
+```{r}
+cfus<-read.csv("./data/cfu-counts-2022-01-20-modified.csv")
+head(cfus)
+```
+## Figure1B
+```{r}
+Fig1B<-ggplot(cfus, aes(x=day, y=value, color=treatment)) + 
+  geom_point(size=3, position=position_dodge(width = .75)) +
+        scale_y_continuous(trans=scales::pseudo_log_trans(base = 10)) + 
+        scale_color_manual(values=l2p16) + 
+        theme_new + theme(axis.text=element_text(size=9)) +
+        ylab(expression(CFU~(cells~ml^-1))) + xlab('Sampling Day') +guides(color=F)
+Fig1B
+```
+## CFU statistics
+Summary statistics
+```{r}
+stats<-cfus %>% group_by(day, treatment) %>%  summarise(mean_cfu=mean(value), se_cfu=sd(value)/sqrt(length(value)))
+stats
+```
+
+Checking Normality and overall significance
+```{r}
+CFU.aov <- aov(value ~ treatment * day, cfus)
+shapiro.test(residuals(CFU.aov)) # p=3.579e-14
+ggdensity(cfus, x = 'value', fill = "lightgray", ) +
+  stat_overlay_normal_density(color = "red", linetype = "dashed")  ## shows non-normal data distribution 
+par(mfrow=c(2,2))
+plot(CFU.aov)
+cfus$intercfus<- interaction(cfus$treatment,cfus$day)
+kruskal.test(value~intercfus, cfus) ## p = 3.941e-07
+```
+Violates assumptions of normality -> split data by day and run kruskal wallis test 
+
+Kruskall Wallis test - report pvalue 
+day 33- priming
+```{r}
+df<-cfus %>% subset(day==33)
+kruskal.test(value ~ treatment, df)
+(cfu_post<-df %>% dunn_test(value ~ treatment) %>% arrange(p.adj))
+```
+day 41 - treatment
+```{r}
+df<-cfus %>% subset(day==41)
+kruskal.test(value ~ treatment, df)
+(cfu_post<-df %>% dunn_test(value ~ treatment) %>% arrange(p.adj))
+```
+day 55 - treatment
+```{r}
+df<-cfus %>% subset(day==55)
+kruskal.test(value ~ treatment, df)
+(cfu_post<-df %>% dunn_test(value ~ treatment) %>% arrange(p.adj))
+```
+day 61 - treatment
+```{r}
+df<-cfus %>% subset(day==61)
+kruskal.test(value ~ treatment, df)
+(cfu_post<-df %>% dunn_test(value ~ treatment) %>% arrange(p.adj))
+```
+day 76 - treatment
+```{r}
+df<-cfus %>% subset(day==76)
+kruskal.test(value ~ treatment, df)
+(cfu_post<-df %>% dunn_test(value ~ treatment) %>% arrange(p.adj))
+```
+
+
+
+#2. Protein Biomass
+```{r}
+physio<-read.csv('./data/physio-2022-01-20.csv',na.strings = c('',"NA")) 
+```
+Data cleaning
+```{r}
+physio<-physio[rowSums(is.na(physio)) != ncol(physio),]
+physio$expdate<-ymd(physio$date)
+
+physio <- physio %>% mutate(Day = 
+                case_when(date == "2021-11-03"~ 0,
+                          date == "2021-11-05"~2,
+                          date == "2021-11-12"~9,
+                          date == "2021-11-18"~15,
+                          date == "2021-11-29"~26,
+                          date == "2021-12-06"~ 33,
+                          date == "2021-12-10"~37,
+                          date == "2021-12-14"~ 41,
+                          date == "2021-12-17"~37,
+                          date == "2021-12-21"~ 48,
+                          date == "2021-12-23"~50,
+                          date == "2021-12-28"~ 55,
+                          date == "2022-01-04"~ 61,
+                          date == "2022-01-07"~64,
+                          date == "2022-01-19"~ 76))
+
+prot<-physio[physio$variable=='avg_protein(ug/ml)',]# subsetting the protein dataset from overall physiology
+```
+
+## Fig 1C
+```{r}
+Fig1C<-ggplot(prot, aes(x=Day, y=value, group=interaction(timepoint,treatment), color=treatment, fill=treatment)) +
+        geom_boxplot(alpha=0.5, outlier.shape = NA, position = position_dodge2(preserve = "single"))+
+        geom_point(size=3, position=position_dodge(width=4)) + 
+        scale_color_manual(values=l2p16,name = "Treatment") +  scale_fill_manual(values=l2p16,name = "Treatment") +
+        theme_new + theme(axis.text=element_text(size=9)) +
+        ylab(expression(Total~Protein~(µg~mL^-1))) + xlab("Sampling Day")+theme_new + guides(color=F, fill=F)
+Fig1C
+```
+## Protien statistics
+Summary statistics
+```{r}
+stats<-prot %>% group_by(Day, treatment) %>%  summarise(mean_prot=mean(value), se_prot=sd(value)/sqrt(length(value)))
+stats
+```
+
+Checking Normality and overall significance
+```{r}
+mod<-aov(value~factor(Day)*factor(treatment), data=prot)
+mod
+par(mfrow=c(2,2))
+plot(mod)
+shapiro.test(residuals(mod)) #p=0.5335
+ggdensity(prot, x = 'value', fill = "lightgray", ) +
+  stat_overlay_normal_density(color = "red", linetype = "dashed")
+anova(mod)
+```
+Running Post-Hoc tests
+```{r}
+tukey<-TukeyHSD(mod)
+(TUK.trt<-data.frame(TukeyHSD(mod)$'factor(treatment)') %>% arrange(p.adj))
+(TUK.time<-data.frame(TukeyHSD(mod)$'factor(Day)') %>% arrange(p.adj))
+(TUK.txt<-data.frame(TukeyHSD(mod)$'factor(Day):factor(treatment)') %>% arrange(p.adj))
+```
+
+
+
+#3. Pedal Lacerates
+subset pedal lacerates
+```{r}
+peds<-physio[physio$variable=='pedal_lacerates',]
+
+peds <- peds %>% mutate(treatment = 
+                case_when(description == "FASW" ~ "FASW",
+                          .default = treatment))
+#Remove NAs for wells where anemone died
+peds <- peds[!is.na(peds$value),]
+```
+##Fig 1D
+```{r}
+# add new variable to data to break up into treatment bins 
+peds <- peds %>% mutate(Phase = 
+                case_when(Day == '2' ~ "Priming",
+                          Day == '9' ~ "Priming",
+                          Day == '15' ~ "Priming",
+                          Day == '26' ~ "Priming",
+                          Day == '37'~"Treatment",
+                          Day == '50'~"Treatment",
+                          Day == '64' ~ "Recovery 1",
+                          Day == '76' ~ "Recovery 2"))
+
+peds$Phase <- factor( peds$Phase, ordered = T, levels = c("Priming","Treatment","Recovery 1", "Recovery 2"))
+#subsetting dataset to remove 2 day timepoint
+peds_prime <- subset(peds, Day>2)
+#graph
+Fig1D<-ggplot(peds_prime, aes(x=Phase, y=value, group=interaction(Phase,treatment),color= treatment,fill=treatment)) +
+        geom_boxplot(alpha=0.5, outlier.shape = NA, position = position_dodge2(preserve = "single"), width = 7.5)+
+        facet_grid(~Phase, scales = "free",space = 'free',switch = 'x')+
+        scale_color_manual(values=l2p16,name = "Treatment") +  scale_fill_manual(values=l2p16,name = "Treatment") +
+        theme_new + theme(strip.background = element_blank(),strip.text.x = element_blank())+
+        ylab(expression(Pedal~lacerates~anemone^-1~week^-1)) +guides(color=F, fill=F)
+Fig1D
+```
+
+## Pedal Lacerate statistics
+Summary Statistics
+```{r}
+#Overall
+stats.peds<-peds %>% group_by(Phase,treatment) %>%  summarise(mean_peds=mean(value), se_alg=sd(value)/sqrt(length(value)))
+stats.peds
+#FASW pooled 
+df<-peds %>% subset(Day==9 | Day==15)
+stats.fasw<-df %>% group_by(Phase) %>%  summarise(mean_peds=mean(value), se_alg=sd(value)/sqrt(length(value)))
+stats.fasw
+```
+Checking For Normality and significance
+```{r}
+mod<-aov(value ~ factor(Day)*factor(treatment), data=peds)
+mod
+par(mfrow=c(2,2))
+plot(mod)
+shapiro.test(residuals(mod)) #untransformed or p=2.19e-14: use kruskal wallis subset by day
+ggdensity(peds, x = 'value', fill = "lightgray", ) +
+  stat_overlay_normal_density(color = "red", linetype = "dashed")
+#df<-peds %>% subset(Day>9), (no pedal laceration on Day 2)
+kruskal.test(value ~ treatment, df)
+(peds_post<-df %>% dunn_test(value ~ treatment) %>% arrange(p.adj)) # use by subset of day to only compare at each timepoint
+```
+
+Violates assumptions of normality -> split data by day and run kruskal wallis test 
+
+Kruskall Wallis test - report pvalue 
+```{r}
+df<-peds %>% subset(Day==9| Day==15)# cannot run 9 on its own because all values are 0
+kruskal.test(value ~ treatment, df)
+(peds_post<-df %>% dunn_test(value ~ treatment) %>% arrange(p.adj))
+```
+Day 15
+```{r}
+df<-peds %>% subset(Day==15)
+kruskal.test(value ~ treatment, df)
+(peds_post<-df %>% dunn_test(value ~ treatment) %>% arrange(p.adj))
+```
+Day 26
+```{r}
+df<-peds %>% subset(Day==26)
+kruskal.test(value ~ treatment, df)
+(peds_post<-df %>% dunn_test(value ~ treatment) %>% arrange(p.adj))
+```
+Day 37
+```{r}
+df<-peds %>% subset(Day==37)
+kruskal.test(value ~ treatment, df)
+(peds_post<-df %>% dunn_test(value ~ treatment) %>% arrange(p.adj))
+```
+Day 50
+```{r}
+df<-peds %>% subset(Day==50)
+kruskal.test(value ~ treatment, df)
+(peds_post<-df %>% dunn_test(value ~ treatment) %>% arrange(p.adj))
+```
+
+Day 64
+```{r}
+df<-peds %>% subset(Day==64)
+kruskal.test(value ~ treatment, df)
+(peds_post<-df %>% dunn_test(value ~ treatment) %>% arrange(p.adj))
+```
+Day 76
+```{r}
+df<-peds %>% subset(Day==76)
+kruskal.test(value ~ treatment, df)
+(peds_post<-df %>% dunn_test(value ~ treatment) %>% arrange(p.adj))
+```
+
+
+
+
+
+
+
+#4. Symbiont Density
+Subsetting Data
+```{r}
+alg<-physio[physio$variable=='sym_prot(cells/ug)',]
+alg <- alg %>% mutate(treatment = 
+                case_when(description == "FASW"~ "FASW",
+                          .default = treatment))
+```      
+
+## Figure 1E
+```{r}
+Fig1E<-ggplot(alg, aes(x=Day, y=log(value), group=interaction(Day,treatment), color=treatment, fill=treatment)) +
+        geom_boxplot(alpha=0.5, outlier.shape = NA, position = position_dodge2(preserve = "single"))+
+        geom_point(size=3, position=position_dodge(width=4)) + 
+        scale_color_manual(values=l2p16,name = "Treatment") +  scale_fill_manual(values=l2p16,name = "Treatment") +
+        theme_new + theme(axis.text=element_text(size=9)) +
+        ylab(expression(Symbiont~Density~(log~cells~µg~protein^-1))) + xlab("Sampling Day")+theme(legend.position = 'top')+guides(color=F,fill=F)+theme_new 
+Fig1E
+
+Fig1_leg<- get_legend(Fig1E)# comment out guide removal in above before extracting
+```
+## Symbiont Statistics
+Summary Statistics
+```{r}
+stats.alg<-alg %>% group_by(Day, treatment) %>%  summarise(mean_alg=mean(value), se_alg=sd(value)/sqrt(length(value)))
+stats.alg
+```
+
+```{r}
+mod.alg<-aov(log10(value)~factor(Day)*factor(treatment), data=alg)
+mod.alg
+par(mfrow=c(2,2))
+plot(mod.alg)
+alg$log.val = log10(alg$value)
+shapiro.test(residuals(mod.alg)) #untransformed or p=0.0251 if log transformed p= 0.05307
+ggdensity(alg, x = 'log.val', fill = "lightgray", ) +
+  stat_overlay_normal_density(color = "red", linetype = "dashed")
+anova(mod.alg)
+```
+
+```{r}
+TukeyHSD(mod.alg)
+(TUK.trt<-data.frame(TukeyHSD(mod.alg)$'factor(treatment)') %>% arrange(p.adj))
+(TUK.time<-data.frame(TukeyHSD(mod.alg)$'factor(Day)') %>% arrange(p.adj))
+(TUK.txt<-data.frame(TukeyHSD(mod.alg)$'factor(Day):factor(treatment)') %>% arrange(p.adj))
+```
+# Figure 1 Composite
+```{r}
+layout<-"AB
+CD"
+
+Fig1<-Fig1B +guides(color = F, fill=F) + Fig1C + Fig1D +guides(color=F, fill=F)+ Fig1E + plot_layout(ncol=2, design=layout, guides='collect')
+Fig1  
+ggsave('Figures/Fig1.pdf',width=8,height=8, bg= 'transparent')
+ggsave('Figures/Fig1_leg.pdf',Fig1_leg,bg='transparent')
+```
