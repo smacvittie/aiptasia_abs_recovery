@@ -637,6 +637,9 @@ BB"
 Fig3a + guides(fill=F, size=F) + Fig3b + guides(fill=F, size=F)  + plot_layout(ncol=1, design=layout)
 Fig3a + Fig3b + plot_layout(ncol=1, design=layout, guides='collect')
 ggsave('Figures/Figure3-withleg.pdf',width=10,height=11)
+Fig3a
+ggsave('Figures/Figure3a.pdf',width=10,height=6)
+ggsave('Figures/Figure3b.pdf',Fig3b,width=10,height=8)
 ```
 
 

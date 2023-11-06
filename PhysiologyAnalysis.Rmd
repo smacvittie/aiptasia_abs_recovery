@@ -36,8 +36,9 @@ shpsc<-c(0,1,3,4,8,15,16)
 names(shpsc)=c('T0','T1','T2','T3','T4','T5','T6')
 
 theme_new<- theme_bw() + theme(panel.grid.major = element_line(color='gray90'), panel.grid.minor = element_line(color='gray90'), text= element_text(size = 15), axis.text.x = element_text(hjust = 1), legend.text = element_text(size = 20), axis.title = element_text(size = 15), title = element_text(size = 20),panel.border = element_blank())
+theme_post<- theme_bw() + theme(panel.grid.major = element_line(color='gray90'), panel.grid.minor = element_line(color='gray90'), text= element_text(size = 15), legend.text = element_text(size = 20), axis.title = element_text(size = 15), title = element_text(size = 20),panel.border = element_blank(),panel.background = element_blank(),plot.background=element_rect(color = 'gray40',fill=NA))
 ```
-#1. CFU counts
+# 1.CFU counts
 ```{r}
 cfus<-read.csv("./data/cfu-counts-2022-01-20-modified.csv")
 head(cfus)
@@ -106,7 +107,7 @@ kruskal.test(value ~ treatment, df)
 
 
 
-#2. Protein Biomass
+# 2.Protein Biomass
 ```{r}
 physio<-read.csv('./data/physio-2022-01-20.csv',na.strings = c('',"NA")) 
 ```
@@ -145,7 +146,7 @@ Fig1C<-ggplot(prot, aes(x=Day, y=value, group=interaction(timepoint,treatment), 
         ylab(expression(Total~Protein~(µg~mL^-1))) + xlab("Sampling Day")+theme_new + guides(color=F, fill=F)
 Fig1C
 ```
-## Protien statistics
+## Protein statistics
 Summary statistics
 ```{r}
 stats<-prot %>% group_by(Day, treatment) %>%  summarise(mean_prot=mean(value), se_prot=sd(value)/sqrt(length(value)))
@@ -287,7 +288,7 @@ kruskal.test(value ~ treatment, df)
 
 
 
-#4. Symbiont Density
+# 4.Symbiont Density
 Subsetting Data
 ```{r}
 alg<-physio[physio$variable=='sym_prot(cells/ug)',]
@@ -338,8 +339,19 @@ TukeyHSD(mod.alg)
 layout<-"AB
 CD"
 
-Fig1<-Fig1B +guides(color = F, fill=F) + Fig1C + Fig1D +guides(color=F, fill=F)+ Fig1E + plot_layout(ncol=2, design=layout, guides='collect')
+Fig1_post<-Fig1B +guides(color = F, fill=F) + Fig1C + Fig1D +guides(color=F, fill=F)+ Fig1E + plot_layout(ncol=2, design=layout, guides='collect')
 Fig1  
-ggsave('Figures/Fig1.pdf',width=8,height=8, bg= 'transparent')
+ggsave('Figures/Fig1_post.pdf',width=8,height=8, bg= 'transparent')
 ggsave('Figures/Fig1_leg.pdf',Fig1_leg,bg='transparent')
+Fig1B<-Fig1B+theme_post
+ggsave('Figures/Fig1B.pdf',Fig1B,bg='transparent',width = 8,height = 8)
+Fig1C<-Fig1C+theme_post
+ggsave('Figures/Fig1C.pdf',Fig1C,bg='transparent')
+Fig1D<-Fig1D+theme_post+theme(strip.background = element_blank(),strip.text.x = element_blank())
+ggsave('Figures/Fig1D.pdf',Fig1D,bg='transparent')
+Fig1E<-Fig1E+theme_post
+ggsave('Figures/Fig1E.pdf',Fig1E,bg='transparent')
+
+
+
 ```
